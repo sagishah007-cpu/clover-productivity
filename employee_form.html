@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Productivity Form — Clover Infotech</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1D9E75;
+    --green-dark: #0F6E56;
+    --green-light: #E1F5EE;
+    --green-mid: #9FE1CB;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --border: #e0e0e0;
+    --bg: #f7f8f6;
+    --card: #ffffff;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Header */
+  .header {
+    background: var(--green);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 12px rgba(15,110,86,.18);
+  }
+  .header-logo {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 600; color: #fff;
+    flex-shrink: 0;
+  }
+  .header h1 { font-size: 16px; font-weight: 600; color: #fff; }
+  .header p { font-size: 12px; color: rgba(255,255,255,.75); margin-top: 1px; }
+
+  .form-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+  }
+
+  /* Progress */
+  .progress-bar-outer {
+    height: 4px;
+    background: var(--green-mid);
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .progress-bar-inner {
+    height: 4px;
+    background: var(--green);
+    border-radius: 4px;
+    transition: width .4s ease;
+    width: 0%;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-dark);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .card-title svg { flex-shrink: 0; }
+
+  /* Form fields */
+  .field { margin-bottom: 1rem; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+  .required { color: #e24b4a; margin-left: 2px; }
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="time"],
+  select,
+  textarea {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(29,158,117,.12);
+  }
+  input.error, select.error, textarea.error {
+    border-color: #e24b4a;
+    box-shadow: 0 0 0 3px rgba(226,75,74,.1);
+  }
+  .error-msg { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
+  .error-msg.show { display: block; }
+  textarea { resize: vertical; min-height: 80px; }
+  select { background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%236b6b6b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+  .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .emp-id-display {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 10px 12px;
+    background: var(--green-light);
+    border: 1.5px solid var(--green-mid);
+    border-radius: var(--radius-sm);
+    color: var(--green-dark);
+    letter-spacing: .05em;
+  }
+  .emp-id-display.empty { color: var(--text-muted); background: #f9f9f9; border-color: var(--border); }
+
+  /* Task type toggle */
+  .task-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .task-option {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+    position: relative;
+    user-select: none;
+  }
+  .task-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .task-option .t-icon { font-size: 22px; margin-bottom: 4px; }
+  .task-option .t-label { font-size: 13px; font-weight: 600; }
+  .task-option .t-sub { font-size: 11px; color: var(--text-muted); }
+  .task-option.selected-ticketed { border-color: var(--blue); background: var(--blue-light); }
+  .task-option.selected-ticketed .t-label { color: var(--blue); }
+  .task-option.selected-non { border-color: var(--green); background: var(--green-light); }
+  .task-option.selected-non .t-label { color: var(--green-dark); }
+
+  /* Non-ticketed checkboxes */
+  .nt-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .nt-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all .18s;
+    user-select: none;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .nt-option input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--green); flex-shrink: 0; }
+  .nt-option.checked { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+
+  /* Line items for non-ticketed */
+  .line-items { margin-top: 1rem; }
+  .line-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin-bottom: .75rem;
+    position: relative;
+    animation: slideIn .25s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: translateY(0); } }
+  .line-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .75rem;
+  }
+  .line-item-tag {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--green);
+    color: #fff;
+  }
+
+  /* Ticket rows */
+  .ticket-row {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin-bottom: .75rem;
+    position: relative;
+    animation: slideIn .25s ease;
+  }
+  .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--red);
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .remove-btn:hover { background: var(--red-light); }
+  .add-btn {
+    width: 100%;
+    padding: 9px;
+    background: none;
+    border: 1.5px dashed var(--green-mid);
+    border-radius: var(--radius-sm);
+    color: var(--green-dark);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: .5rem;
+    transition: all .18s;
+  }
+  .add-btn:hover { background: var(--green-light); border-style: solid; }
+
+  /* Time field */
+  .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .time-display {
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--green-dark);
+    text-align: center;
+  }
+
+  /* Submit */
+  .submit-area {
+    margin-top: 1.5rem;
+  }
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .submit-btn:hover { background: var(--green-dark); }
+  .submit-btn:active { transform: scale(.98); }
+  .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  /* Success */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 3rem 1.5rem;
+  }
+  .success-screen.show { display: block; }
+  .success-icon {
+    width: 72px; height: 72px;
+    background: var(--green-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem;
+    font-size: 32px;
+  }
+  .success-screen h2 { font-size: 22px; font-weight: 600; margin-bottom: .5rem; }
+  .success-screen p { color: var(--text-muted); font-size: 14px; }
+  .success-detail {
+    background: var(--green-light);
+    border: 1px solid var(--green-mid);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1.25rem 0;
+    text-align: left;
+    font-size: 13px;
+  }
+  .success-detail .row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .success-detail .row span:first-child { color: var(--text-muted); }
+  .success-detail .row span:last-child { font-weight: 600; }
+
+  /* Spinner */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff;
+    padding: 10px 20px; border-radius: 8px;
+    font-size: 13px; z-index: 999;
+    opacity: 0; transition: opacity .3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  .section-hidden { display: none; }
+  .section-visible { display: block; }
+
+  @media (max-width: 400px) {
+    .nt-grid { grid-template-columns: 1fr; }
+    .time-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">C</div>
+  <div>
+    <h1>Daily Productivity Log</h1>
+    <p>Clover Infotech — Submit once per day</p>
+  </div>
+</div>
+
+<div class="form-wrap">
+  <div class="progress-bar-outer">
+    <div class="progress-bar-inner" id="progressBar"></div>
+  </div>
+
+  <!-- SUCCESS SCREEN -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">✓</div>
+    <h2>Form Submitted!</h2>
+    <p>Your productivity log has been recorded successfully.</p>
+    <div class="success-detail" id="successDetail"></div>
+    <p style="font-size:12px;color:var(--text-muted)">You may close this tab now.</p>
+  </div>
+
+  <!-- FORM -->
+  <form id="mainForm" novalidate>
+
+    <!-- Section 1: Employee Info -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="#0F6E56" stroke-width="1.5"/><path d="M1 13c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Employee Details
+      </div>
+
+      <div class="field">
+        <label>Name <span class="required">*</span></label>
+        <select id="empName" onchange="onNameChange()" required>
+          <option value="">— Select your name —</option>
+          <option>Abdullah Khan</option><option>Abhishek Singh</option><option>Aditya Ohol</option>
+          <option>Ahamed Sowdagar</option><option>Alwin Jose</option><option>Ayush Dave</option>
+          <option>Brihaspati Yadav</option><option>Dhanesh Bhadwalkar</option><option>Dipti Shetye</option>
+          <option>Fazal Shaikh</option><option>Gangaiguru Dharmaraj</option><option>Gaurang Thakur</option>
+          <option>Harsh Sharma</option><option>Harshad Patil</option><option>Harshal Chavan</option>
+          <option>Harshal Choudhari</option><option>Harshvardhan Patil</option><option>Jayesh Saindane</option>
+          <option>Jignesh Solanki</option><option>Kamlesh Shimpi</option><option>Kapil Singh</option>
+          <option>Karan Pillai</option><option>Krishna Balyapelli</option><option>Mayuri Borkar</option>
+          <option>Mulayam Yadav</option><option>Namira Khan</option><option>Omkar Shinde</option>
+          <option>Prachit Raut</option><option>Prajakta Shelar</option><option>Prajwal Bhosale</option>
+          <option>Pranavesh Patil</option><option>Prasanna Nandoskar</option><option>Prathamesh Lad</option>
+          <option>Pravin Sargar</option><option>Rahul Gupta</option><option>Ramkrishna Patil</option>
+          <option>Ruchita Sonar</option><option>Sakshi Shikhare</option><option>Sandip Patil</option>
+          <option>Sanjeev Dangi</option><option>Shruti Walve</option><option>Shubham Babar</option>
+          <option>Spandan Thombare</option><option>Sunil Vishwakarma</option><option>Surag Hanjankar</option>
+          <option>Suraj Sah</option><option>Tuljesh Yadav</option><option>Tushar Habib</option>
+          <option>V. N. Sunder</option><option>Vasant Ambore</option><option>Vishal Bendre</option>
+          <option>Yash Yewale</option>
+        </select>
+        <div class="error-msg" id="err-empName">Please select your name.</div>
+      </div>
+
+      <div class="field">
+        <label>Employee ID</label>
+        <div class="emp-id-display empty" id="empIdDisplay">Auto-filled after name selection</div>
+        <input type="hidden" id="empId">
+      </div>
+
+      <div class="field">
+        <label>SPOC Name</label>
+        <div id="spocDisplay" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text-muted);background:#f9f9f9;">Auto-filled</div>
+        <input type="hidden" id="spocName">
+      </div>
+
+      <div class="field">
+        <label>Lead Name</label>
+        <div id="leadDisplay" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text-muted);background:#f9f9f9;">Auto-filled</div>
+        <input type="hidden" id="leadName">
+      </div>
+    </div>
+
+    <!-- Section 2: Task Type -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#0F6E56" stroke-width="1.5"/><path d="M4 7h6M4 4.5h3M4 9.5h5" stroke="#0F6E56" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Task in Hand <span class="required" style="font-size:11px;font-weight:400">*</span>
+      </div>
+      <div class="task-toggle">
+        <label class="task-option" id="opt-ticketed" onclick="selectTask('ticketed')">
+          <input type="radio" name="taskType" value="Ticketed" id="radio-ticketed">
+          <div class="t-icon">🎫</div>
+          <div class="t-label">Ticketed</div>
+          <div class="t-sub">Customer tickets</div>
+        </label>
+        <label class="task-option" id="opt-non" onclick="selectTask('non-ticketed')">
+          <input type="radio" name="taskType" value="Non-Ticketed" id="radio-non">
+          <div class="t-icon">📋</div>
+          <div class="t-label">Non-Ticketed</div>
+          <div class="t-sub">Internal tasks</div>
+        </label>
+      </div>
+      <div class="error-msg show" id="err-taskType" style="display:none">Please select a task type.</div>
+    </div>
+
+    <!-- TICKETED SECTION -->
+    <div id="ticketedSection" class="section-hidden">
+      <div class="card">
+        <div class="card-title">🎫 Ticketed Work</div>
+        <div id="ticketRows"></div>
+        <button type="button" class="add-btn" onclick="addTicketRow()">+ Add Another Ticket</button>
+      </div>
+    </div>
+
+    <!-- NON-TICKETED SECTION -->
+    <div id="nonTicketedSection" class="section-hidden">
+      <div class="card">
+        <div class="card-title">📋 Select Non-Ticketed Categories <span class="required">*</span></div>
+        <div class="nt-grid" id="ntGrid">
+          <label class="nt-option" onclick="toggleNT(this,'Self Learning')">
+            <input type="checkbox" value="Self Learning"> Self Learning
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'POC')">
+            <input type="checkbox" value="POC"> POC
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Training')">
+            <input type="checkbox" value="Training"> Training
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Project Discussion')">
+            <input type="checkbox" value="Project Discussion"> Project Discussion
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Shadowing')">
+            <input type="checkbox" value="Shadowing"> Shadowing
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Meeting')">
+            <input type="checkbox" value="Meeting"> Meeting
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Team Support')">
+            <input type="checkbox" value="Team Support"> Team Support
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Automation')">
+            <input type="checkbox" value="Automation"> Automation
+          </label>
+          <label class="nt-option" onclick="toggleNT(this,'Others')">
+            <input type="checkbox" value="Others"> Others
+          </label>
+        </div>
+        <div class="error-msg" id="err-nt">Please select at least one category.</div>
+        <div class="line-items" id="ntLineItems"></div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="submit-area">
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <span id="submitTxt">Submit Productivity Log</span>
+        <div class="spinner" id="submitSpinner"></div>
+      </button>
+      <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:.75rem;">
+        By submitting you confirm this is your daily activity for <strong id="todayDateLabel"></strong>
+      </p>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIGURATION — PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
+// ============================================================
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAk2Mq4nWKdMgIkNIwymabm00NgB9WOir98bj0cJ0peJuibUvrdreQOqQybAAun8RD/exec";
+
+// Employee master data
+const EMP_DATA = {
+  "Abdullah Khan":       {id:"CI17969",spoc:"Sunil Vishwakarma",    lead:"Charusheela Pawar"},
+  "Abhishek Singh":      {id:"CI16525",spoc:"Pranavesh Patil",       lead:"Khaleel Sowdagar"},
+  "Aditya Ohol":         {id:"CI18916",spoc:"Prasanna Nandoskar",   lead:"Nikhil Patil"},
+  "Ahamed Sowdagar":     {id:"CI18672",spoc:"Prathamesh Lad",        lead:"Nikhil Patil"},
+  "Alwin Jose":          {id:"CI17601",spoc:"Jignesh Solanki",       lead:"Sandesh Patil"},
+  "Ayush Dave":          {id:"CI16507",spoc:"Prasanna Nandoskar",   lead:"Nikhil Patil"},
+  "Brihaspati Yadav":    {id:"CI9377", spoc:"-",                     lead:"Khaleel Sowdagar"},
+  "Dhanesh Bhadwalkar":  {id:"CI15175",spoc:"Rahul Gupta",           lead:"Nikhil Patil"},
+  "Dipti Shetye":        {id:"CI16523",spoc:"Vishal Bendre",         lead:"Nikhil Patil"},
+  "Fazal Shaikh":        {id:"CI15061",spoc:"Rahul Gupta",           lead:"Nikhil Patil"},
+  "Gangaiguru Dharmaraj":{id:"CI20587",spoc:"-",                     lead:"Nikhil Patil"},
+  "Gaurang Thakur":      {id:"CI14244",spoc:"-",                     lead:"Nikhil Patil"},
+  "Harsh Sharma":        {id:"CI18914",spoc:"Prajakta Shelar",       lead:"Nikhil Patil"},
+  "Harshad Patil":       {id:"CI15004",spoc:"Tuljesh Yadav",         lead:"Nikhil Patil"},
+  "Harshal Chavan":      {id:"CI15006",spoc:"Prajakta Shelar",       lead:"Nikhil Patil"},
+  "Harshal Choudhari":   {id:"CI14684",spoc:"Brihaspati Yadav",      lead:"Khaleel Sowdagar"},
+  "Harshvardhan Patil":  {id:"CI15003",spoc:"Brihaspati Yadav",      lead:"Khaleel Sowdagar"},
+  "Jayesh Saindane":     {id:"CI14716",spoc:"-",                     lead:"Nikhil Patil"},
+  "Jignesh Solanki":     {id:"CI19877",spoc:"-",                     lead:"Sandesh Patil"},
+  "Kamlesh Shimpi":      {id:"CI15001",spoc:"Prathamesh Lad",        lead:"Nikhil Patil"},
+  "Kapil Singh":         {id:"CI19250",spoc:"-",                     lead:"Ajinkya Vichare"},
+  "Karan Pillai":        {id:"CI13169",spoc:"-",                     lead:"Nikhil Patil"},
+  "Krishna Balyapelli":  {id:"CI16506",spoc:"Jayesh Saindane",       lead:"Nikhil Patil"},
+  "Mayuri Borkar":       {id:"CI18929",spoc:"Jayesh Saindane",       lead:"Nikhil Patil"},
+  "Mulayam Yadav":       {id:"CI10340",spoc:"Jignesh Solanki",       lead:"Sandesh Patil"},
+  "Namira Khan":         {id:"CI14563",spoc:"Karan Pillai",          lead:"Nikhil Patil"},
+  "Omkar Shinde":        {id:"CI18739",spoc:"Karan Pillai",          lead:"Nikhil Patil"},
+  "Prachit Raut":        {id:"CI14780",spoc:"Rahul Gupta",           lead:"Nikhil Patil"},
+  "Prajakta Shelar":     {id:"CI11620",spoc:"-",                     lead:"Nikhil Patil"},
+  "Prajwal Bhosale":     {id:"CI18916",spoc:"Prasanna Nandoskar",   lead:"Nikhil Patil"},
+  "Pranavesh Patil":     {id:"CI14949",spoc:"-",                     lead:"Khaleel Sowdagar"},
+  "Prasanna Nandoskar":  {id:"CI16407",spoc:"Tuljesh Yadav",         lead:"Nikhil Patil"},
+  "Prathamesh Lad":      {id:"CI12082",spoc:"-",                     lead:"Nikhil Patil"},
+  "Pravin Sargar":       {id:"CI13113",spoc:"Karan Pillai",          lead:"Nikhil Patil"},
+  "Rahul Gupta":         {id:"CI13213",spoc:"-",                     lead:"Nikhil Patil"},
+  "Ramkrishna Patil":    {id:"CI13479",spoc:"Prasanna Nandoskar",   lead:"Nikhil Patil"},
+  "Ruchita Sonar":       {id:"CI18917",spoc:"Vishal Bendre",         lead:"Nikhil Patil"},
+  "Sakshi Shikhare":     {id:"CI13525",spoc:"Tuljesh Yadav",         lead:"Nikhil Patil"},
+  "Sandip Patil":        {id:"CI18912",spoc:"Prajakta Shelar",       lead:"Nikhil Patil"},
+  "Sanjeev Dangi":       {id:"CI17283",spoc:"Jignesh Solanki",       lead:"Sandesh Patil"},
+  "Shruti Walve":        {id:"CI13668",spoc:"Vishal Bendre",         lead:"Nikhil Patil"},
+  "Shubham Babar":       {id:"CI18927",spoc:"Jayesh Saindane",       lead:"Nikhil Patil"},
+  "Spandan Thombare":    {id:"CI18911",spoc:"Gaurang Thakur",        lead:"Nikhil Patil"},
+  "Sunil Vishwakarma":   {id:"CI6899", spoc:"-",                     lead:"Charusheela Pawar"},
+  "Surag Hanjankar":     {id:"CI14893",spoc:"Gaurang Thakur",        lead:"Nikhil Patil"},
+  "Suraj Sah":           {id:"CI16509",spoc:"Rahul Gupta",           lead:"Nikhil Patil"},
+  "Tuljesh Yadav":       {id:"CI8741", spoc:"-",                     lead:"Nikhil Patil"},
+  "Tushar Habib":        {id:"CI14793",spoc:"Tuljesh Yadav",         lead:"Nikhil Patil"},
+  "V. N. Sunder":        {id:"CI14741",spoc:"Prathamesh Lad",        lead:"Nikhil Patil"},
+  "Vasant Ambore":       {id:"CI16550",spoc:"Gaurang Thakur",        lead:"Nikhil Patil"},
+  "Vishal Bendre":       {id:"CI16143",spoc:"-",                     lead:"Nikhil Patil"},
+  "Yash Yewale":         {id:"CI18915",spoc:"Prathamesh Lad",        lead:"Nikhil Patil"}
+};
+
+let currentTask = "";
+let ticketCount = 0;
+const ntLineData = {}; // category -> {desc, time, remarks}
+
+// Date
+const today = new Date();
+document.getElementById("todayDateLabel").textContent = today.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+
+function onNameChange(){
+  const name = document.getElementById("empName").value;
+  const idEl = document.getElementById("empIdDisplay");
+  if(name && EMP_DATA[name]){
+    const d = EMP_DATA[name];
+    idEl.textContent = d.id;
+    idEl.className = "emp-id-display";
+    document.getElementById("empId").value = d.id;
+    const spoc = d.spoc || "-";
+    document.getElementById("spocDisplay").textContent = spoc;
+    document.getElementById("spocDisplay").style.color = spoc==="-"?"var(--text-muted)":"var(--text)";
+    document.getElementById("spocName").value = spoc;
+    document.getElementById("leadDisplay").textContent = d.lead;
+    document.getElementById("leadDisplay").style.color = "var(--text)";
+    document.getElementById("leadName").value = d.lead;
+  } else {
+    idEl.textContent = "Auto-filled after name selection";
+    idEl.className = "emp-id-display empty";
+    document.getElementById("empId").value = "";
+    document.getElementById("spocDisplay").textContent = "Auto-filled";
+    document.getElementById("spocDisplay").style.color = "var(--text-muted)";
+    document.getElementById("spocName").value = "";
+    document.getElementById("leadDisplay").textContent = "Auto-filled";
+    document.getElementById("leadDisplay").style.color = "var(--text-muted)";
+    document.getElementById("leadName").value = "";
+  }
+  updateProgress();
+}
+
+function selectTask(type){
+  currentTask = type;
+  document.getElementById("opt-ticketed").className = "task-option" + (type==="ticketed"?" selected-ticketed":"");
+  document.getElementById("opt-non").className = "task-option" + (type==="non-ticketed"?" selected-non":"");
+  document.getElementById("radio-ticketed").checked = type==="ticketed";
+  document.getElementById("radio-non").checked = type==="non-ticketed";
+  document.getElementById("err-taskType").style.display="none";
+
+  if(type==="ticketed"){
+    document.getElementById("ticketedSection").className="section-visible";
+    document.getElementById("nonTicketedSection").className="section-hidden";
+    if(ticketCount===0) addTicketRow();
+  } else {
+    document.getElementById("nonTicketedSection").className="section-visible";
+    document.getElementById("ticketedSection").className="section-hidden";
+  }
+  updateProgress();
+}
+
+function addTicketRow(){
+  ticketCount++;
+  const id = "ticket-"+ticketCount;
+  const div = document.createElement("div");
+  div.className = "ticket-row";
+  div.id = id;
+  div.innerHTML = `
+    <div class="line-item-header">
+      <span class="line-item-tag">Ticket #${ticketCount}</span>
+      ${ticketCount>1?`<button type="button" class="remove-btn" onclick="removeRow('${id}')">✕</button>`:""}
+    </div>
+    <div class="field">
+      <label>Customer Name <span class="required">*</span></label>
+      <input type="text" class="t-customer" placeholder="Enter customer name">
+    </div>
+    <div class="field">
+      <label>Ticket ID <span class="required">*</span></label>
+      <input type="text" class="t-ticketid" placeholder="e.g. TKT-2345" style="font-family:'DM Mono',monospace">
+      <div class="hint">Ticket ID is mandatory</div>
+    </div>
+    <div class="field">
+      <label>Number of Tickets Worked On</label>
+      <input type="number" class="t-count" min="1" value="1" placeholder="1">
+    </div>
+    <div class="field">
+      <label>Ticket Description</label>
+      <textarea class="t-desc" placeholder="Describe the work done..."></textarea>
+    </div>
+    <div class="field">
+      <label>Active Work Time (HH:MM) <span class="required">*</span></label>
+      <input type="time" class="t-time" placeholder="02:30">
+    </div>
+    <div class="field">
+      <label>Remarks</label>
+      <input type="text" class="t-remarks" placeholder="Optional">
+    </div>
+  `;
+  document.getElementById("ticketRows").appendChild(div);
+}
+
+function removeRow(id){
+  const el = document.getElementById(id);
+  if(el) el.remove();
+}
+
+function toggleNT(label, category){
+  const cb = label.querySelector("input[type='checkbox']");
+  const checked = !cb.checked;
+  cb.checked = checked;
+  label.classList.toggle("checked", checked);
+  if(checked){
+    addNTLineItem(category);
+  } else {
+    const li = document.getElementById("nt-li-"+category.replace(/\s/g,"_"));
+    if(li) li.remove();
+    delete ntLineData[category];
+  }
+  document.getElementById("err-nt").style.display = "none";
+  updateProgress();
+}
+
+function addNTLineItem(category){
+  const safeId = "nt-li-"+category.replace(/\s/g,"_");
+  if(document.getElementById(safeId)) return;
+  const div = document.createElement("div");
+  div.className = "line-item";
+  div.id = safeId;
+  div.innerHTML = `
+    <div class="line-item-header">
+      <span class="line-item-tag">${category}</span>
+    </div>
+    <div class="field">
+      <label>Task Description <span class="required">*</span></label>
+      <textarea class="nt-desc" data-cat="${category}" placeholder="Describe the ${category} task..." rows="3"></textarea>
+    </div>
+    <div class="field">
+      <label>Active Work Time (HH:MM) <span class="required">*</span></label>
+      <input type="time" class="nt-time" data-cat="${category}">
+    </div>
+    <div class="field">
+      <label>Remarks</label>
+      <input type="text" class="nt-remarks" data-cat="${category}" placeholder="Optional">
+    </div>
+  `;
+  document.getElementById("ntLineItems").appendChild(div);
+}
+
+function updateProgress(){
+  let score = 0;
+  if(document.getElementById("empName").value) score += 33;
+  if(currentTask) score += 33;
+  if(currentTask==="ticketed" && document.querySelectorAll(".t-ticketid").length>0) score += 34;
+  if(currentTask==="non-ticketed" && document.querySelectorAll(".nt-option.checked").length>0) score += 34;
+  document.getElementById("progressBar").style.width = Math.min(score,100)+"%";
+}
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3000);
+}
+
+function validateForm(){
+  let ok = true;
+  // Name
+  if(!document.getElementById("empName").value){
+    document.getElementById("err-empName").classList.add("show");
+    ok = false;
+  } else { document.getElementById("err-empName").classList.remove("show"); }
+  // Task type
+  if(!currentTask){
+    document.getElementById("err-taskType").style.display="block";
+    ok = false;
+  } else { document.getElementById("err-taskType").style.display="none"; }
+  // Ticketed validation
+  if(currentTask==="ticketed"){
+    document.querySelectorAll(".ticket-row").forEach(row=>{
+      const tid = row.querySelector(".t-ticketid");
+      const ttime = row.querySelector(".t-time");
+      if(!tid.value.trim()){ tid.classList.add("error"); ok=false; } else tid.classList.remove("error");
+      if(!ttime.value){ ttime.classList.add("error"); ok=false; } else ttime.classList.remove("error");
+    });
+  }
+  // Non-ticketed validation
+  if(currentTask==="non-ticketed"){
+    const checked = document.querySelectorAll(".nt-option.checked");
+    if(checked.length===0){ document.getElementById("err-nt").style.display="block"; ok=false; }
+    document.querySelectorAll(".nt-desc").forEach(el=>{
+      if(!el.value.trim()){ el.classList.add("error"); ok=false; } else el.classList.remove("error");
+    });
+    document.querySelectorAll(".nt-time").forEach(el=>{
+      if(!el.value){ el.classList.add("error"); ok=false; } else el.classList.remove("error");
+    });
+  }
+  return ok;
+}
+
+function buildPayload(){
+  const name = document.getElementById("empName").value;
+  const emp = EMP_DATA[name];
+  const timestamp = new Date().toISOString();
+  const rows = [];
+
+  if(currentTask==="ticketed"){
+    document.querySelectorAll(".ticket-row").forEach(row=>{
+      rows.push({
+        timestamp,
+        empId: emp.id,
+        empName: name,
+        spoc: emp.spoc||"-",
+        lead: emp.lead,
+        taskType: "Ticketed",
+        taskCategory: "Ticketed",
+        customerName: row.querySelector(".t-customer").value.trim(),
+        ticketId: row.querySelector(".t-ticketid").value.trim(),
+        ticketCount: row.querySelector(".t-count").value,
+        description: row.querySelector(".t-desc").value.trim(),
+        activeTime: row.querySelector(".t-time").value,
+        remarks: row.querySelector(".t-remarks").value.trim()
+      });
+    });
+  } else {
+    document.querySelectorAll(".nt-option.checked").forEach(opt=>{
+      const cat = opt.querySelector("input").value;
+      const safeId = "nt-li-"+cat.replace(/\s/g,"_");
+      const li = document.getElementById(safeId);
+      if(!li) return;
+      rows.push({
+        timestamp,
+        empId: emp.id,
+        empName: name,
+        spoc: emp.spoc||"-",
+        lead: emp.lead,
+        taskType: "Non-Ticketed",
+        taskCategory: cat,
+        customerName: "",
+        ticketId: "",
+        ticketCount: "",
+        description: li.querySelector(".nt-desc").value.trim(),
+        activeTime: li.querySelector(".nt-time").value,
+        remarks: li.querySelector(".nt-remarks")?.value.trim()||""
+      });
+    });
+  }
+  return rows;
+}
+
+document.getElementById("mainForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  if(!validateForm()){
+    showToast("Please fill all required fields.");
+    return;
+  }
+  const rows = buildPayload();
+  const btn = document.getElementById("submitBtn");
+  const txt = document.getElementById("submitTxt");
+  const spinner = document.getElementById("submitSpinner");
+  btn.disabled = true;
+  txt.textContent = "Submitting...";
+  spinner.style.display = "block";
+
+  try {
+    const name = document.getElementById("empName").value;
+    const emp = EMP_DATA[name];
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({rows})
+    });
+    // Show success
+    document.getElementById("mainForm").style.display = "none";
+    const sc = document.getElementById("successScreen");
+    sc.classList.add("show");
+    document.getElementById("successDetail").innerHTML = `
+      <div class="row"><span>Employee</span><span>${name}</span></div>
+      <div class="row"><span>ID</span><span>${emp.id}</span></div>
+      <div class="row"><span>Task Type</span><span>${currentTask==="ticketed"?"Ticketed":"Non-Ticketed"}</span></div>
+      <div class="row"><span>Entries</span><span>${rows.length} line item(s)</span></div>
+      <div class="row"><span>Submitted at</span><span>${new Date().toLocaleTimeString("en-IN")}</span></div>
+    `;
+    document.getElementById("progressBar").style.width = "100%";
+  } catch(err){
+    showToast("Submission failed. Please try again.");
+    btn.disabled = false;
+    txt.textContent = "Submit Productivity Log";
+    spinner.style.display = "none";
+  }
+});
+
+// init
+addTicketRow();
+document.getElementById("ticketedSection").className="section-hidden";
+updateProgress();
+</script>
+</body>
+</html>
