@@ -184,6 +184,7 @@ tr:hover td{background:var(--bg)}
         <div class="topbar-right">
           <div class="last-updated"><span class="live-dot"></span><span id="lastUpdatedLabel">Loading...</span></div>
           <button class="btn refresh-btn" id="refreshBtn" onclick="loadData()" title="Refresh">↻ Refresh</button>
+          <button class="btn" onclick="showDebugPanel()" style="background:#1a1a1a;color:#00ff88;border-color:#333;font-family:monospace">🔍 Debug</button>
         </div>
       </div>
 
@@ -349,9 +350,10 @@ tr:hover td{background:var(--bg)}
 
 <script>
 // ============================================================
-// CONFIGURATION
+// CONFIGURATION — Fill your Google Sheet ID below
 // ============================================================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAk2Mq4nWKdMgIkNIwymabm00NgB9WOir98bj0cJ0peJuibUvrdreQOqQybAAun8RD/exec"; // same URL as form
+const SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"; // ← REPLACE THIS
+const SHEET_TAB = "Submissions";
 
 const ALL_EMP = [
   "Abdullah Khan","Abhishek Singh","Aditya Ohol","Ahamed Sowdagar","Alwin Jose","Ayush Dave",
@@ -399,20 +401,160 @@ function showView(v){
   if(v==="all") renderAll();
 }
 
-// LOAD DATA FROM GOOGLE SHEETS
+// ============================================================
+// GOOGLE SHEETS DATA FETCHER — Uses JSONP gviz (no CORS ever)
+// ============================================================
+function parseCSV(text){
+  const lines = text.trim().split("\n");
+  if(lines.length < 2) return [];
+  function parseLine(line){
+    const result=[]; let cur="", inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){inQ=!inQ;}
+      else if(c===','&&!inQ){result.push(cur.trim());cur="";}
+      else{cur+=c;}
+    }
+    result.push(cur.trim());
+    return result;
+  }
+  const headers = parseLine(lines[0]);
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim()) continue;
+    const vals=parseLine(lines[i]);
+    const obj={};
+    headers.forEach((h,j)=>{obj[h.replace(/^"|"$/g,"")]=(vals[j]||"").replace(/^"|"$/g,"");});
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function showStatus(msg, isError){
+  document.getElementById("lastUpdatedLabel").textContent = msg;
+  document.getElementById("lastUpdatedSidebar").textContent = msg;
+  let banner = document.getElementById("diag-banner");
+  if(!banner){
+    banner = document.createElement("div");
+    banner.id = "diag-banner";
+    banner.style.cssText = "margin-bottom:12px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;flex-wrap:wrap;";
+    document.querySelector(".main").prepend(banner);
+  }
+  if(isError){
+    banner.style.background="#FCEBEB"; banner.style.color="#A32D2D"; banner.style.border="1px solid #f5c6c6";
+    banner.innerHTML = `⚠️ <strong>Dashboard not connected:</strong> ${msg}.`;
+    banner.style.display="flex";
+  } else {
+    banner.style.display="none";
+  }
+}
+
+function showDebugPanel(){
+  let panel = document.getElementById("debug-panel");
+  if(!panel){
+    panel = document.createElement("div");
+    panel.id = "debug-panel";
+    panel.style.cssText = "background:#1a1a1a;color:#00ff88;font-family:monospace;font-size:12px;padding:16px;border-radius:8px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;";
+    document.querySelector(".main").prepend(panel);
+  }
+
+  const todayIST = new Date(new Date().getTime()+5.5*60*60*1000).toISOString().slice(0,10);
+  const cols = allRows.length > 0 ? Object.keys(allRows[0]) : [];
+  const firstRow = allRows.length > 0 ? allRows[0] : {};
+  const todayRows = getTodayRows();
+  const submittedNames = getSubmittedNames();
+
+  let out = "";
+  out += "=== DASHBOARD DEBUG ===\n";
+  out += `Total rows fetched from Sheet: ${allRows.length}\n`;
+  out += `Today (IST): ${todayIST}\n`;
+  out += `Rows matching today: ${todayRows.length}\n`;
+  out += `Submitted names found: ${submittedNames.size}\n\n`;
+
+  out += `=== COLUMN NAMES IN SHEET ===\n`;
+  out += cols.map((c,i)=>`  [${i}] "${c}"`).join("\n") + "\n\n";
+
+  if(allRows.length > 0){
+    out += `=== FIRST ROW SAMPLE ===\n`;
+    cols.forEach(c => { out += `  "${c}": "${String(firstRow[c]).substring(0,60)}"\n`; });
+  }
+
+  if(todayRows.length === 0 && allRows.length > 0){
+    out += `\n=== DATE MISMATCH DEBUG ===\n`;
+    out += `Timestamp column dashboard looks for: "Timestamp (IST)" or "Timestamp"\n`;
+    const tsVal = allRows[0]["Timestamp (IST)"] || allRows[0]["Timestamp"] || "(not found in first row)";
+    out += `Actual timestamp in first row: "${tsVal}"\n`;
+    out += `Today IST we are comparing against: "${todayIST}"\n`;
+  }
+
+  panel.textContent = out;
+  panel.style.display = "block";
+}
+
 async function loadData(){
   const btn = document.getElementById("refreshBtn");
-  btn.closest(".main") && document.querySelector(".main").classList.add("refreshing");
+  document.querySelector(".main") && document.querySelector(".main").classList.add("refreshing");
   btn.textContent = "↻";
+
+  // Check if Sheet ID is still placeholder
+  if(!SHEET_ID || SHEET_ID === "YOUR_GOOGLE_SHEET_ID_HERE"){
+    showStatus("Sheet ID not configured — open this file in Notepad and replace YOUR_GOOGLE_SHEET_ID_HERE with your actual Sheet ID", true);
+    document.querySelector(".main").classList.remove("refreshing");
+    btn.textContent = "↻ Refresh";
+    return;
+  }
+
   try {
-    const res = await fetch(GOOGLE_SCRIPT_URL+"?date=all", {method:"GET"});
-    const data = await res.json();
-    allRows = data.rows || [];
-    document.getElementById("lastUpdatedLabel").textContent = "Updated "+new Date().toLocaleTimeString("en-IN");
-    document.getElementById("lastUpdatedSidebar").textContent = "Synced "+new Date().toLocaleTimeString("en-IN");
+    // Method 1: gviz JSON (most reliable, works with public sheets)
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}&t=${Date.now()}`;
+    const res = await fetch(gvizUrl);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const raw = await res.text();
+    // gviz wraps in: google.visualization.Query.setResponse({...})
+    const jsonStr = raw.replace(/^[^(]+\(/, "").replace(/\);?$/, "");
+    const json = JSON.parse(jsonStr);
+
+    if(json.status === "error"){
+      throw new Error("Sheet not public or wrong ID. Open your Google Sheet → Share → Anyone with link → Viewer");
+    }
+
+    const cols = json.table.cols.map(c => c.label);
+    const rows = (json.table.rows || []).map(r => {
+      const obj = {};
+      cols.forEach((h, i) => {
+        const cell = r.c && r.c[i];
+        obj[h] = cell ? (cell.f || cell.v || "") : "";
+        if(obj[h] === null || obj[h] === undefined) obj[h] = "";
+        obj[h] = String(obj[h]);
+      });
+      return obj;
+    });
+
+    allRows = rows.filter(r => Object.values(r).some(v => v !== ""));
+    showStatus(false, false); // hide error banner
+    const t = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+    document.getElementById("lastUpdatedLabel").textContent = "✓ Live — updated "+t;
+    document.getElementById("lastUpdatedSidebar").textContent = "Synced "+t;
+
   } catch(e){
-    console.warn("Could not fetch from Sheets:", e.message);
-    document.getElementById("lastUpdatedLabel").textContent = "Offline — using local data";
+    console.warn("gviz fetch failed, trying CSV fallback:", e.message);
+    try {
+      // Method 2: CSV fallback
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(SHEET_TAB)}&t=${Date.now()}`;
+      const res2 = await fetch(csvUrl);
+      if(!res2.ok) throw new Error("CSV HTTP "+res2.status);
+      const text = await res2.text();
+      if(text.includes("Sign in") || text.includes("<html")){
+        throw new Error("Sheet is not public — please set sharing to Anyone with link → Viewer");
+      }
+      allRows = parseCSV(text);
+      const t = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+      document.getElementById("lastUpdatedLabel").textContent = "✓ Updated (CSV) "+t;
+      document.getElementById("lastUpdatedSidebar").textContent = "Synced "+t;
+      showStatus(false, false);
+    } catch(e2){
+      showStatus(e2.message || "Cannot read Sheet — check Sheet ID and make it public (Viewer)", true);
+    }
   }
   updateMetrics();
   renderLeadSummary();
@@ -423,16 +565,50 @@ async function loadData(){
   btn.textContent = "↻ Refresh";
 }
 
+function extractDateFromTS(ts){
+  if(!ts) return "";
+  ts = String(ts).trim();
+
+  // ISO UTC format: "2026-05-04T06:23:40.000Z" or "2026-05-04T06:23:40"
+  // Must convert UTC to IST (+5:30) before extracting date
+  if(ts.match(/^\d{4}-\d{2}-\d{2}T/)){
+    const d = new Date(ts);
+    if(!isNaN(d)){
+      const ist = new Date(d.getTime() + 5.5*60*60*1000);
+      return ist.toISOString().slice(0,10); // YYYY-MM-DD in IST
+    }
+  }
+
+  // Format: M/D/YYYY or MM/DD/YYYY (Google Sheets US locale)
+  const slashUS = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(slashUS) return `${slashUS[3]}-${String(slashUS[1]).padStart(2,"0")}-${String(slashUS[2]).padStart(2,"0")}`;
+
+  // Format: DD-MM-YYYY HH:MM:SS IST  or  YYYY-MM-DD HH:MM:SS IST
+  const dashParts = ts.split(" ")[0].split("-");
+  if(dashParts.length===3){
+    if(dashParts[0].length===4) return dashParts.slice(0,3).join("-"); // YYYY-MM-DD
+    return `${dashParts[2]}-${dashParts[1]}-${dashParts[0]}`; // DD-MM-YYYY
+  }
+
+  return "";
+}
+
 function getTodayRows(){
+  const todayIST = new Date(new Date().getTime()+5.5*60*60*1000).toISOString().slice(0,10);
   return allRows.filter(r=>{
-    const ts = r["Timestamp"]?new Date(r["Timestamp"]).toISOString().slice(0,10):"";
-    return ts===todayStr;
+    const ts = r["Timestamp (IST)"] || r["Timestamp"] || r["timestamp"] || r["TIMESTAMP"] || "";
+    const rowDate = extractDateFromTS(ts);
+    return rowDate === todayIST;
   });
 }
 
 function getSubmittedNames(){
   const today = getTodayRows();
-  return new Set(today.map(r=>r["Employee Name"]));
+  return new Set(today.map(r=>{
+    // Try every possible column name variation
+    return r["Employee Name"] || r["Employee Name*"] || r["EmployeeName"] ||
+           r["employee name"] || r["EMPLOYEE NAME"] || r["Name"] || r["name"] || "";
+  }).filter(Boolean));
 }
 
 function updateMetrics(){
@@ -485,7 +661,15 @@ function renderSubmissions(){
   const tbody = document.getElementById("subTbody");
   if(!rows.length){tbody.innerHTML=`<tr><td colspan="11" class="no-data">No submissions found</td></tr>`;return;}
   tbody.innerHTML = rows.map((r,i)=>{
-    const ts = r["Timestamp"]?new Date(r["Timestamp"]).toLocaleString("en-IN"):"—";
+    const tsRaw2 = r["Timestamp (IST)"] || r["Timestamp"] || r["timestamp"] || "";
+    let ts = tsRaw2 || "—";
+    if(tsRaw2.match(/^\d{4}-\d{2}-\d{2}T/)){
+      const d2 = new Date(tsRaw2);
+      if(!isNaN(d2)){
+        const ist2 = new Date(d2.getTime()+5.5*60*60*1000);
+        ts = ist2.toLocaleString("en-IN",{hour12:true})+" IST";
+      }
+    }
     const type = r["Task Type"]||"";
     const badge = type==="Ticketed"?'<span class="badge blue">Ticketed</span>':'<span class="badge purple">Non-Ticketed</span>';
     return `<tr>
@@ -593,11 +777,28 @@ function doExport(){
       if(st==="Not Submitted") wsData.push([n,getEmpId(n),getTeam(n),getSPOC(n),getLead(n),st,defRemarks[n]||""]);
     });
   } else {
-    wsData=[["Timestamp","Employee ID","Employee Name","SPOC","Lead","Task Type","Task Category","Customer Name","Ticket ID","No. of Tickets","Description","Active Time","Remarks"]];
+    wsData=[["Timestamp (IST)","Employee ID","Employee Name","SPOC","Lead","Task Type","Task Category","Customer Name","Ticket ID","No. of Tickets","Description","Remarks"]];
     let rows = allRows;
-    if(from) rows = rows.filter(r=>new Date(r["Timestamp"]).toISOString().slice(0,10)>=from);
-    if(to) rows = rows.filter(r=>new Date(r["Timestamp"]).toISOString().slice(0,10)<=to);
-    rows.forEach(r=>wsData.push([r["Timestamp"],r["Employee ID"],r["Employee Name"],r["SPOC Name"],r["Lead Name"],r["Task Type"],r["Task Category"],r["Customer Name"]||"",r["Ticket ID"]||"",r["No. of Tickets"]||"",r["Description"],r["Active Time (HH:MM)"],r["Remarks"]||""]));
+    if(from) rows = rows.filter(r=>{
+      const ts = r["Timestamp (IST)"] || r["Timestamp"] || r["timestamp"] || "";
+      return extractDateFromTS(ts) >= from;
+    });
+    if(to) rows = rows.filter(r=>{
+      const ts = r["Timestamp (IST)"] || r["Timestamp"] || r["timestamp"] || "";
+      return extractDateFromTS(ts) <= to;
+    });
+    rows.forEach(r=>{
+      const tsRaw = r["Timestamp (IST)"] || r["Timestamp"] || r["timestamp"] || "";
+      let tsIST = tsRaw;
+      if(tsRaw.match(/^\d{4}-\d{2}-\d{2}T/)){
+        const d = new Date(tsRaw);
+        if(!isNaN(d)){
+          const ist = new Date(d.getTime()+5.5*60*60*1000);
+          tsIST = ist.toISOString().replace("T"," ").slice(0,19)+" IST";
+        }
+      }
+      wsData.push([tsIST,r["Employee ID"],r["Employee Name"],r["SPOC Name"],r["Lead Name"],r["Task Type"],r["Task Category"],r["Customer Name"]||"",r["Ticket ID"]||"",r["No. of Tickets"]||"",r["Description"],r["Remarks"]||""]);
+    });
   }
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   XLSX.utils.book_append_sheet(wb,ws,exportTarget==="defaulters"?"Defaulters":"Submissions");
