@@ -352,7 +352,7 @@ tr:hover td{background:var(--bg)}
 // ============================================================
 // CONFIGURATION — Fill your Google Sheet ID below
 // ============================================================
-const SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"; // ← REPLACE THIS
+const SHEET_ID = "1zAcENT5CV3iElPYMSQYPoI9bXLhHwjxF-3J2L1VslpQ";
 const SHEET_TAB = "Submissions";
 
 const ALL_EMP = [
@@ -498,7 +498,7 @@ async function loadData(){
 
   // Check if Sheet ID is still placeholder
   if(!SHEET_ID || SHEET_ID === "YOUR_GOOGLE_SHEET_ID_HERE"){
-    showStatus("Sheet ID not configured — open this file in Notepad and replace YOUR_GOOGLE_SHEET_ID_HERE with your actual Sheet ID", true);
+    showStatus("Sheet ID not configured", true);
     document.querySelector(".main").classList.remove("refreshing");
     btn.textContent = "↻ Refresh";
     return;
