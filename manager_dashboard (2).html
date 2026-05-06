@@ -352,7 +352,7 @@ tr:hover td{background:var(--bg)}
 // ============================================================
 // CONFIGURATION — Fill your Google Sheet ID below
 // ============================================================
-const SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"; // ← REPLACE THIS
+const SHEET_ID = "1zAcENT5CV3iElPYMSQYPoI9bXLhHwjxF-3J2L1VslpQ"; // ← REPLACE THIS
 const SHEET_TAB = "Submissions";
 
 const ALL_EMP = [
@@ -491,78 +491,75 @@ function showDebugPanel(){
   panel.style.display = "block";
 }
 
-async function loadData(){
+// JSONP callback — called by Google gviz (bypasses CORS completely)
+window.dsCallback = function(json){
+  try {
+    if(!json || !json.table){ throw new Error("No table data returned"); }
+    const cols = json.table.cols.map(c => c.label || c.id || "");
+    const rows = (json.table.rows || []).map(r => {
+      const obj = {};
+      cols.forEach((h, i) => {
+        const cell = r.c && r.c[i];
+        let val = "";
+        if(cell){ val = (cell.f !== null && cell.f !== undefined) ? cell.f : (cell.v !== null && cell.v !== undefined ? cell.v : ""); }
+        obj[h] = String(val);
+      });
+      return obj;
+    });
+    allRows = rows.filter(r => Object.values(r).some(v => String(v).trim() !== ""));
+    showStatus("", false);
+    const t = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+    document.getElementById("lastUpdatedLabel").textContent = "✓ Live — updated "+t;
+    document.getElementById("lastUpdatedSidebar").textContent = "Synced "+t;
+    updateMetrics(); renderLeadSummary(); renderSubmissions(); renderDefaulters(); renderAll();
+  } catch(err){
+    showStatus("Data parse error: "+err.message, true);
+  }
+  const old = document.getElementById("gviz-script");
+  if(old) old.remove();
+  const btn = document.getElementById("refreshBtn");
+  if(btn) btn.textContent = "↻ Refresh";
+  document.querySelector(".main") && document.querySelector(".main").classList.remove("refreshing");
+};
+
+function loadData(){
   const btn = document.getElementById("refreshBtn");
   document.querySelector(".main") && document.querySelector(".main").classList.add("refreshing");
   btn.textContent = "↻";
 
-  // Check if Sheet ID is still placeholder
   if(!SHEET_ID || SHEET_ID === "YOUR_GOOGLE_SHEET_ID_HERE"){
-    showStatus("Sheet ID not configured — open this file in Notepad and replace YOUR_GOOGLE_SHEET_ID_HERE with your actual Sheet ID", true);
+    showStatus("Sheet ID not configured", true);
     document.querySelector(".main").classList.remove("refreshing");
     btn.textContent = "↻ Refresh";
     return;
   }
 
-  try {
-    // Method 1: gviz JSON (most reliable, works with public sheets)
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB)}&t=${Date.now()}`;
-    const res = await fetch(gvizUrl);
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const raw = await res.text();
-    // gviz wraps in: google.visualization.Query.setResponse({...})
-    const jsonStr = raw.replace(/^[^(]+\(/, "").replace(/\);?$/, "");
-    const json = JSON.parse(jsonStr);
+  // Remove old script tag
+  const old = document.getElementById("gviz-script");
+  if(old) old.remove();
 
-    if(json.status === "error"){
-      throw new Error("Sheet not public or wrong ID. Open your Google Sheet → Share → Anyone with link → Viewer");
+  // Inject JSONP script tag — zero CORS issues, works from any host
+  const script = document.createElement("script");
+  script.id = "gviz-script";
+  script.onerror = function(){
+    showStatus("Cannot reach Google Sheets. Check internet connection or Sheet sharing settings.", true);
+    document.querySelector(".main").classList.remove("refreshing");
+    btn.textContent = "↻ Refresh";
+  };
+  script.src = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+    "/gviz/tq?tqx=out:json;callback=dsCallback&sheet=" +
+    encodeURIComponent(SHEET_TAB) + "&t=" + Date.now();
+  document.head.appendChild(script);
+
+  // 10 second timeout
+  setTimeout(function(){
+    if(document.getElementById("gviz-script")){
+      document.getElementById("gviz-script").remove();
+      showStatus("Timed out. Make sure Sheet is set to: Share → Anyone with link → Viewer", true);
+      document.querySelector(".main").classList.remove("refreshing");
+      btn.textContent = "↻ Refresh";
     }
-
-    const cols = json.table.cols.map(c => c.label);
-    const rows = (json.table.rows || []).map(r => {
-      const obj = {};
-      cols.forEach((h, i) => {
-        const cell = r.c && r.c[i];
-        obj[h] = cell ? (cell.f || cell.v || "") : "";
-        if(obj[h] === null || obj[h] === undefined) obj[h] = "";
-        obj[h] = String(obj[h]);
-      });
-      return obj;
-    });
-
-    allRows = rows.filter(r => Object.values(r).some(v => v !== ""));
-    showStatus(false, false); // hide error banner
-    const t = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
-    document.getElementById("lastUpdatedLabel").textContent = "✓ Live — updated "+t;
-    document.getElementById("lastUpdatedSidebar").textContent = "Synced "+t;
-
-  } catch(e){
-    console.warn("gviz fetch failed, trying CSV fallback:", e.message);
-    try {
-      // Method 2: CSV fallback
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(SHEET_TAB)}&t=${Date.now()}`;
-      const res2 = await fetch(csvUrl);
-      if(!res2.ok) throw new Error("CSV HTTP "+res2.status);
-      const text = await res2.text();
-      if(text.includes("Sign in") || text.includes("<html")){
-        throw new Error("Sheet is not public — please set sharing to Anyone with link → Viewer");
-      }
-      allRows = parseCSV(text);
-      const t = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
-      document.getElementById("lastUpdatedLabel").textContent = "✓ Updated (CSV) "+t;
-      document.getElementById("lastUpdatedSidebar").textContent = "Synced "+t;
-      showStatus(false, false);
-    } catch(e2){
-      showStatus(e2.message || "Cannot read Sheet — check Sheet ID and make it public (Viewer)", true);
-    }
-  }
-  updateMetrics();
-  renderLeadSummary();
-  renderSubmissions();
-  renderDefaulters();
-  renderAll();
-  document.querySelector(".main").classList.remove("refreshing");
-  btn.textContent = "↻ Refresh";
+  }, 10000);
 }
 
 function extractDateFromTS(ts){
