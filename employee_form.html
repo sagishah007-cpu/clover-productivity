@@ -910,6 +910,9 @@ function resetForm(){
   document.getElementById("ntLineItems").innerHTML = "";
   // Reset progress bar
   updateProgress();
+  document.getElementById("submitBtn").disabled = false;
+  document.getElementById("submitTxt").textContent = "Submit Productivity Log";
+  document.getElementById("submitSpinner").style.display = "none";
   window.scrollTo(0,0);
 }
 
