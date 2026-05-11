@@ -390,12 +390,7 @@
     <h2>Form Submitted!</h2>
     <p>Your productivity log has been recorded successfully.</p>
     <div class="success-detail" id="successDetail"></div>
-    <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:10px;align-items:center">
-      <button onclick="resetForm()" style="width:100%;max-width:320px;padding:13px;background:var(--green);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-        ＋ Submit Another Form
-      </button>
-      <p style="font-size:12px;color:var(--text-muted)">or close this tab if you are done.</p>
-    </div>
+    <p style="font-size:12px;color:var(--text-muted)">You may close this tab now.</p>
   </div>
 
   <!-- FORM -->
@@ -542,7 +537,7 @@
 // ============================================================
 // CONFIGURATION — PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
 // ============================================================
-const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAk2Mq4nWKdMgIkNIwymabm00NgB9WOir98bj0cJ0peJuibUvrdreQOqQybAAun8RD/exec";
 
 // Employee master data
 const EMP_DATA = {
@@ -575,7 +570,7 @@ const EMP_DATA = {
   "Omkar Shinde":        {id:"CI18739",spoc:"Karan Pillai",          lead:"Nikhil Patil"},
   "Prachit Raut":        {id:"CI14780",spoc:"Rahul Gupta",           lead:"Nikhil Patil"},
   "Prajakta Shelar":     {id:"CI11620",spoc:"-",                     lead:"Nikhil Patil"},
-  "Prajwal Bhosale":     {id:"CI18916",spoc:"Prasanna Nandoskar",   lead:"Nikhil Patil"},
+  "Prajwal Bhosale":     {id:"CI18913",spoc:"Prasanna Nandoskar",   lead:"Nikhil Patil"},
   "Pranavesh Patil":     {id:"CI14949",spoc:"-",                     lead:"Khaleel Sowdagar"},
   "Prasanna Nandoskar":  {id:"CI16407",spoc:"Tuljesh Yadav",         lead:"Nikhil Patil"},
   "Prathamesh Lad":      {id:"CI12082",spoc:"-",                     lead:"Nikhil Patil"},
@@ -891,47 +886,6 @@ document.getElementById("mainForm").addEventListener("submit", async function(e)
 addTicketRow();
 document.getElementById("ticketedSection").className="section-hidden";
 updateProgress();
-
-function resetForm(){
-  // Reset all fields
-  document.getElementById("empName").value = "";
-  document.getElementById("empIdDisplay").textContent = "Auto-filled after name selection";
-  document.getElementById("empIdDisplay").className = "emp-id-display empty";
-  document.getElementById("empId").value = "";
-  document.getElementById("spocDisplay").textContent = "Auto-filled";
-  document.getElementById("spocDisplay").style.color = "var(--text-muted)";
-  document.getElementById("spocName").value = "";
-  document.getElementById("leadDisplay").textContent = "Auto-filled";
-  document.getElementById("leadDisplay").style.color = "var(--text-muted)";
-  document.getElementById("leadName").value = "";
-  // Reset task type
-  currentTask = "";
-  document.getElementById("opt-ticketed").className = "task-option";
-  document.getElementById("opt-non").className = "task-option";
-  document.getElementById("radio-ticketed").checked = false;
-  document.getElementById("radio-non").checked = false;
-  document.getElementById("ticketedSection").className = "section-hidden";
-  document.getElementById("nonTicketedSection").className = "section-hidden";
-  // Clear ticket rows
-  document.getElementById("ticketRows").innerHTML = "";
-  ticketCount = 0;
-  // Clear non-ticketed
-  document.querySelectorAll(".nt-option").forEach(el => { el.classList.remove("checked"); el.querySelector("input").checked = false; });
-  document.getElementById("ntLineItems").innerHTML = "";
-  // Reset submit button
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = false;
-  document.getElementById("submitTxt").textContent = "Submit Productivity Log";
-  document.getElementById("submitSpinner").style.display = "none";
-  // Hide success, show form
-  document.getElementById("successScreen").classList.remove("show");
-  document.getElementById("mainForm").style.display = "block";
-  // Re-init
-  addTicketRow();
-  document.getElementById("ticketedSection").className = "section-hidden";
-  updateProgress();
-  window.scrollTo(0,0);
-}
 </script>
 </body>
 </html>
