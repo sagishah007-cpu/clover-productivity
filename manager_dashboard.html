@@ -165,6 +165,14 @@ tr:hover td{background:var(--bg)}
         <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 12c0-2.209 1.79-3.5 4-3.5s4 1.291 4 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 8.5c1.5 0 3 .8 3 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         All Employees
       </a>
+      <a class="nav-item" onclick="showView('monthly')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4 1v2M10 1v2M1 6h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Monthly Report
+      </a>
+      <a class="nav-item" onclick="showView('performers')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M7 1l1.5 3.5H13l-3.5 2.5 1.5 4L7 9l-4 2 1.5-4L1 4.5h4.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        Performers
+      </a>
       <a class="nav-item" onclick="showView('admin')">
         <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 12c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10.5 1.5v3M9 3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         Admin
@@ -325,6 +333,88 @@ tr:hover td{background:var(--bg)}
               <th>Name</th><th>Emp ID</th><th>Team</th><th>SPOC</th><th>Lead</th><th>Today Status</th><th>Mark Leave</th>
             </tr></thead>
             <tbody id="allTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTHLY REPORT VIEW -->
+    <div id="view-monthly" style="display:none">
+      <div class="topbar">
+        <div class="topbar-left"><h2>Monthly Report</h2><p>Per-employee ticket &amp; hours summary</p></div>
+        <div class="topbar-right">
+          <select class="ctrl" id="monthPicker" onchange="renderMonthly()" style="height:32px;font-size:13px"></select>
+          <select class="ctrl" id="monthLeadFilter" onchange="renderMonthly()" style="height:32px;font-size:13px">
+            <option value="">All Leads</option>
+            <option>Ajinkya Vichare</option><option>Charusheela Pawar</option>
+            <option>Khaleel Sowdagar</option><option>Nikhil Patil</option><option>Sandesh Patil</option>
+          </select>
+          <input type="text" id="monthSearch" placeholder="Search employee..." oninput="renderMonthly()" style="width:160px;height:32px">
+          <button class="btn primary" onclick="exportMonthly()">↓ Export Excel</button>
+        </div>
+      </div>
+      <!-- Summary cards -->
+      <div class="metrics" id="monthMetrics" style="grid-template-columns:repeat(4,1fr)">
+        <div class="metric green"><div class="m-label">Total Submissions</div><div class="m-val" id="mm-subs">—</div><div class="m-sub">Form entries this month</div></div>
+        <div class="metric blue"><div class="m-label">Ticketed Tasks</div><div class="m-val" id="mm-tickets">—</div><div class="m-sub">Total tickets worked</div></div>
+        <div class="metric amber"><div class="m-label">Non-Ticketed Tasks</div><div class="m-val" id="mm-nontickets">—</div><div class="m-sub">Support & other work</div></div>
+        <div class="metric" style="border-top-color:var(--green)"><div class="m-label">Total Hours</div><div class="m-val" id="mm-hours">—</div><div class="m-sub">Active work hours logged</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title" id="monthTableLabel">Employee Summary</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Employee</th><th>Emp ID</th><th>Lead</th>
+              <th>Days Active</th><th>Ticketed</th><th>Non-Ticketed</th><th>Total Tasks</th><th>Active Hours</th><th>Avg Hrs/Day</th>
+            </tr></thead>
+            <tbody id="monthTbody"><tr><td colspan="10" class="no-data">Select a month to load data</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERFORMERS VIEW -->
+    <div id="view-performers" style="display:none">
+      <div class="topbar">
+        <div class="topbar-left"><h2>Performers</h2><p>Top 5 &amp; Bottom 5 based on monthly activity</p></div>
+        <div class="topbar-right">
+          <select class="ctrl" id="perfMonthPicker" onchange="renderPerformers()" style="height:32px;font-size:13px"></select>
+          <select class="ctrl" id="perfMetric" onchange="renderPerformers()" style="height:32px;font-size:13px">
+            <option value="hours">By Active Hours</option>
+            <option value="tasks">By Total Tasks</option>
+            <option value="tickets">By Tickets</option>
+            <option value="days">By Days Active</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem" id="perfGrids">
+        <!-- Top 5 -->
+        <div class="panel">
+          <div class="panel-header" style="background:linear-gradient(135deg,#e1f5ee,#fff)">
+            <span class="panel-title" style="color:var(--green-dark)">🏆 Top 5 Performers</span>
+            <span style="font-size:11px;color:var(--text-muted)" id="perfTopLabel"></span>
+          </div>
+          <div id="perfTop" style="padding:.75rem"></div>
+        </div>
+        <!-- Bottom 5 -->
+        <div class="panel">
+          <div class="panel-header" style="background:linear-gradient(135deg,#fcebeb,#fff)">
+            <span class="panel-title" style="color:var(--red)">⚠️ Bottom 5 Performers</span>
+            <span style="font-size:11px;color:var(--text-muted)" id="perfBottomLabel"></span>
+          </div>
+          <div id="perfBottom" style="padding:.75rem"></div>
+        </div>
+      </div>
+      <!-- Full ranking table -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Full Rankings</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Rank</th><th>Employee</th><th>Lead</th><th>Days Active</th><th>Tickets</th><th>Non-Tickets</th><th>Total Tasks</th><th>Active Hours</th></tr></thead>
+            <tbody id="perfTbody"></tbody>
           </table>
         </div>
       </div>
@@ -523,7 +613,7 @@ document.getElementById("todayLabel").textContent = new Date().toLocaleDateStrin
 document.getElementById("filterDate").value = todayStr;
 
 // NAVIGATION
-const views = ["dashboard","submissions","defaulters","all","admin"];
+const views = ["dashboard","submissions","defaulters","all","monthly","performers","admin"];
 function showView(v){
   views.forEach(x=>{
     document.getElementById("view-"+x).style.display = x===v?"block":"none";
@@ -534,6 +624,8 @@ function showView(v){
   if(v==="submissions") renderSubmissions();
   if(v==="defaulters") renderDefaulters();
   if(v==="all") renderAll();
+  if(v==="monthly"){ populateMonthPickers(); renderMonthly(); }
+  if(v==="performers"){ populateMonthPickers(); renderPerformers(); }
   if(v==="admin") renderAdminRoster();
 }
 
@@ -1059,6 +1151,220 @@ function doExport(){
   closeExport();
 }
 
+// ============================================================
+// MONTHLY REPORT & PERFORMERS
+// ============================================================
+function populateMonthPickers(){
+  const pickers = ["monthPicker","perfMonthPicker"];
+  pickers.forEach(pid=>{
+    const el = document.getElementById(pid);
+    if(!el || el.options.length > 1) return;
+    // Build last 12 months
+    const now = new Date(new Date().getTime()+5.5*60*60*1000);
+    for(let i=0;i<12;i++){
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      const val = d.toISOString().slice(0,7); // YYYY-MM
+      const label = d.toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+      const opt = document.createElement("option");
+      opt.value = val; opt.textContent = label;
+      if(i===0) opt.selected = true;
+      el.appendChild(opt);
+    }
+  });
+}
+
+function parseHHMM(str){
+  if(!str) return 0;
+  const p = String(str).split(":");
+  return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0);
+}
+
+function minsToHHMM(mins){
+  if(!mins) return "0:00";
+  const h = Math.floor(mins/60);
+  const m = mins%60;
+  return h+":"+(m<10?"0":"")+m;
+}
+
+function getMonthRows(ym){
+  return allRows.filter(r=>{
+    const ts = r["Timestamp (IST)"]||r["Timestamp"]||r["timestamp"]||"";
+    const d = extractDateFromTS(ts);
+    return d.slice(0,7) === ym;
+  });
+}
+
+function buildMonthStats(ym){
+  const rows = getMonthRows(ym);
+  const stats = {}; // name -> {days:Set, tickets:0, nontickets:0, mins:0}
+  rows.forEach(r=>{
+    const name = r["Employee Name"]||r["Employee Name*"]||"";
+    if(!name) return;
+    if(!stats[name]) stats[name]={days:new Set(),tickets:0,nontickets:0,mins:0};
+    const ts = r["Timestamp (IST)"]||r["Timestamp"]||r["timestamp"]||"";
+    const d = extractDateFromTS(ts);
+    if(d) stats[name].days.add(d);
+    const type = (r["Task Type"]||"").toLowerCase();
+    if(type==="ticketed") stats[name].tickets++;
+    else if(type==="non-ticketed"||type==="non ticketed") stats[name].nontickets++;
+    const t = r["Active Time (HH:MM)"]||r["Active Time"]||"";
+    stats[name].mins += parseHHMM(t);
+  });
+  return stats;
+}
+
+function renderMonthly(){
+  const ym = document.getElementById("monthPicker").value;
+  if(!ym) return;
+  const leadF = document.getElementById("monthLeadFilter").value;
+  const search = (document.getElementById("monthSearch").value||"").toLowerCase();
+  const stats = buildMonthStats(ym);
+
+  // Summary metrics
+  const rows = getMonthRows(ym);
+  document.getElementById("mm-subs").textContent = rows.length;
+  document.getElementById("mm-tickets").textContent = rows.filter(r=>(r["Task Type"]||"").toLowerCase()==="ticketed").length;
+  document.getElementById("mm-nontickets").textContent = rows.filter(r=>(r["Task Type"]||"").toLowerCase().includes("non")).length;
+  const totalMins = Object.values(stats).reduce((a,s)=>a+s.mins,0);
+  document.getElementById("mm-hours").textContent = minsToHHMM(totalMins)+" hrs";
+
+  // Table
+  let emps = EMP_LIST.filter(n=>{
+    if(leadF && getLead(n)!==leadF) return false;
+    if(search && !n.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById("monthTbody");
+  document.getElementById("monthTableLabel").textContent = `Employee Summary — ${emps.length} employees`;
+
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="10" class="no-data">No data for this month yet</td></tr>`;
+    return;
+  }
+
+  // Sort by total tasks desc
+  emps = emps.sort((a,b)=>{
+    const sa=stats[a]||{tickets:0,nontickets:0,mins:0,days:new Set()};
+    const sb=stats[b]||{tickets:0,nontickets:0,mins:0,days:new Set()};
+    return (sb.tickets+sb.nontickets)-(sa.tickets+sa.nontickets);
+  });
+
+  tbody.innerHTML = emps.map((n,i)=>{
+    const s = stats[n]||{days:new Set(),tickets:0,nontickets:0,mins:0};
+    const days = s.days.size;
+    const total = s.tickets+s.nontickets;
+    const avgMins = days>0 ? Math.round(s.mins/days) : 0;
+    const hoursCell = s.mins ? `<span style="font-weight:600;color:var(--green-dark)">${minsToHHMM(s.mins)}</span>` : '<span style="color:#ccc">—</span>';
+    const rowStyle = !total ? 'style="opacity:.5"' : '';
+    return `<tr ${rowStyle}>
+      <td style="color:var(--text-muted)">${i+1}</td>
+      <td><strong>${n}</strong></td>
+      <td class="mono" style="font-size:11px">${getEmpId(n)}</td>
+      <td style="font-size:12px">${getLead(n).split(" ")[0]}</td>
+      <td style="text-align:center">${days||'<span style="color:#ccc">0</span>'}</td>
+      <td style="text-align:center">${s.tickets||'<span style="color:#ccc">0</span>'}</td>
+      <td style="text-align:center">${s.nontickets||'<span style="color:#ccc">0</span>'}</td>
+      <td style="text-align:center;font-weight:600">${total||'<span style="color:#ccc">0</span>'}</td>
+      <td style="text-align:center">${hoursCell}</td>
+      <td style="text-align:center;font-size:12px;color:var(--text-muted)">${avgMins?minsToHHMM(avgMins):"—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+function exportMonthly(){
+  const ym = document.getElementById("monthPicker").value;
+  if(!ym){alert("Select a month first.");return;}
+  const stats = buildMonthStats(ym);
+  const wb = XLSX.utils.book_new();
+  const wsData = [["#","Employee","Emp ID","Lead","Days Active","Ticketed Tasks","Non-Ticketed Tasks","Total Tasks","Active Hours (HH:MM)","Avg Hrs/Day"]];
+  EMP_LIST.forEach((n,i)=>{
+    const s = stats[n]||{days:new Set(),tickets:0,nontickets:0,mins:0};
+    const days = s.days.size;
+    wsData.push([i+1,n,getEmpId(n),getLead(n),days,s.tickets,s.nontickets,s.tickets+s.nontickets,minsToHHMM(s.mins),days>0?minsToHHMM(Math.round(s.mins/days)):"—"]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb,ws,"Monthly Report");
+  XLSX.writeFile(wb,`monthly_report_${ym}.xlsx`);
+}
+
+function renderPerformers(){
+  const ym = document.getElementById("perfMonthPicker").value;
+  const metric = document.getElementById("perfMetric").value;
+  if(!ym) return;
+  const stats = buildMonthStats(ym);
+
+  const metricLabel = {hours:"Active Hours",tasks:"Total Tasks",tickets:"Ticketed Tasks",days:"Days Active"}[metric];
+  document.getElementById("perfTopLabel").textContent = metricLabel;
+  document.getElementById("perfBottomLabel").textContent = metricLabel;
+
+  function getScore(n){
+    const s = stats[n]||{days:new Set(),tickets:0,nontickets:0,mins:0};
+    if(metric==="hours") return s.mins;
+    if(metric==="tasks") return s.tickets+s.nontickets;
+    if(metric==="tickets") return s.tickets;
+    if(metric==="days") return s.days.size;
+    return 0;
+  }
+  function fmtScore(n){
+    const s = stats[n]||{days:new Set(),tickets:0,nontickets:0,mins:0};
+    if(metric==="hours") return minsToHHMM(s.mins)+" hrs";
+    if(metric==="tasks") return (s.tickets+s.nontickets)+" tasks";
+    if(metric==="tickets") return s.tickets+" tickets";
+    if(metric==="days") return s.days.size+" days";
+    return "—";
+  }
+
+  const ranked = [...EMP_LIST].sort((a,b)=>getScore(b)-getScore(a));
+  const top5 = ranked.slice(0,5);
+  const bottom5 = ranked.slice(-5).reverse();
+  const maxScore = getScore(top5[0])||1;
+
+  function renderCard(list, isTop){
+    return list.map((n,i)=>{
+      const score = getScore(n);
+      const pct = Math.round(score/maxScore*100);
+      const color = isTop ? "var(--green)" : "#E24B4A";
+      const rank = isTop ? i+1 : (EMP_LIST.length - bottom5.length + i + 1);
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:22px;height:22px;border-radius:50%;background:${isTop?'var(--green-light)':'var(--red-light)'};color:${isTop?'var(--green-dark)':'var(--red)'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${isTop?i+1:ranked.indexOf(n)+1}</span>
+            <span style="font-size:13px;font-weight:600">${n}</span>
+          </div>
+          <span style="font-size:12px;font-weight:600;color:${color}">${fmtScore(n)}</span>
+        </div>
+        <div style="height:5px;background:#eee;border-radius:5px;overflow:hidden">
+          <div style="height:5px;width:${pct}%;background:${color};border-radius:5px;transition:width .5s"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${getLead(n)}</div>
+      </div>`;
+    }).join("");
+  }
+
+  document.getElementById("perfTop").innerHTML = top5.length ? renderCard(top5,true) : '<p class="no-data">No data</p>';
+  document.getElementById("perfBottom").innerHTML = bottom5.length ? renderCard(bottom5,false) : '<p class="no-data">No data</p>';
+
+  // Full ranking table
+  const tbody = document.getElementById("perfTbody");
+  tbody.innerHTML = ranked.map((n,i)=>{
+    const s = stats[n]||{days:new Set(),tickets:0,nontickets:0,mins:0};
+    const isTop = i<5, isBot = i>=ranked.length-5;
+    const rankBadge = isTop?`<span class="badge green">#${i+1}</span>`:isBot?`<span class="badge red">#${i+1}</span>`:`<span style="color:var(--text-muted)">#${i+1}</span>`;
+    return `<tr>
+      <td>${rankBadge}</td>
+      <td><strong>${n}</strong></td>
+      <td style="font-size:12px">${getLead(n).split(" ")[0]}</td>
+      <td style="text-align:center">${s.days.size}</td>
+      <td style="text-align:center">${s.tickets}</td>
+      <td style="text-align:center">${s.nontickets}</td>
+      <td style="text-align:center;font-weight:600">${s.tickets+s.nontickets}</td>
+      <td style="text-align:center;color:var(--green-dark);font-weight:600">${minsToHHMM(s.mins)}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ============================================================
 // AUTO-REFRESH every 60 seconds
 setInterval(loadData, 60000);
 
