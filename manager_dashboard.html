@@ -165,6 +165,10 @@ tr:hover td{background:var(--bg)}
         <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 12c0-2.209 1.79-3.5 4-3.5s4 1.291 4 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 8.5c1.5 0 3 .8 3 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         All Employees
       </a>
+      <a class="nav-item" onclick="showView('admin')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 12c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10.5 1.5v3M9 3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Admin
+      </a>
     </nav>
     <div class="sidebar-footer">
       <p id="lastUpdatedSidebar">Not yet loaded</p>
@@ -295,7 +299,7 @@ tr:hover td{background:var(--bg)}
     <!-- ALL EMPLOYEES VIEW -->
     <div id="view-all" style="display:none">
       <div class="topbar">
-        <div class="topbar-left"><h2>All 52 Employees</h2><p>Full roster with today's status</p></div>
+        <div class="topbar-left"><h2>All Employees</h2><p id="allEmpCountLabel">Full roster with today's status</p></div>
       </div>
       <div class="panel">
         <div class="panel-header">
@@ -326,10 +330,109 @@ tr:hover td{background:var(--bg)}
       </div>
     </div>
 
+    <!-- ADMIN VIEW -->
+    <div id="view-admin" style="display:none">
+      <div class="topbar">
+        <div class="topbar-left"><h2>Admin Panel</h2><p>Add or remove employees from the roster</p></div>
+        <div class="topbar-right">
+          <button class="btn primary" onclick="openAddEmp()">+ Add Employee</button>
+        </div>
+      </div>
+      <!-- Password gate -->
+      <div id="adminGate" class="panel" style="padding:2rem;text-align:center">
+        <div style="max-width:320px;margin:0 auto">
+          <div style="font-size:32px;margin-bottom:1rem">🔐</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:.5rem">Admin Access Required</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:1.25rem">Enter admin password to manage employees</div>
+          <input type="password" id="adminPwInput" placeholder="Password" style="width:100%;height:38px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.75rem;outline:none">
+          <button class="btn primary" style="width:100%;justify-content:center" onclick="checkAdminPw()">Unlock</button>
+          <div id="adminPwErr" style="color:#A32D2D;font-size:12px;margin-top:.5rem;display:none">Incorrect password</div>
+        </div>
+      </div>
+      <!-- Actual admin content (hidden until unlocked) -->
+      <div id="adminContent" style="display:none">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title" id="adminRosterLabel">Roster (52 employees)</span>
+            <div class="toolbar">
+              <input type="text" id="adminSearch" placeholder="Search employee..." oninput="renderAdminRoster()" style="width:180px">
+              <select class="ctrl" id="adminLeadFilter" onchange="renderAdminRoster()">
+                <option value="">All leads</option>
+                <option>Ajinkya Vichare</option><option>Charusheela Pawar</option>
+                <option>Khaleel Sowdagar</option><option>Nikhil Patil</option><option>Sandesh Patil</option>
+              </select>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>Name</th><th>Emp ID</th><th>Team</th><th>Lead</th><th>SPOC</th><th>Action</th>
+              </tr></thead>
+              <tbody id="adminTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
-<!-- EXPORT MODAL -->
+<!-- ADD EMPLOYEE MODAL -->
+<div class="modal-bg" id="addEmpModal">
+  <div class="modal" style="max-width:480px">
+    <h3>Add New Employee</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="field" style="grid-column:1/-1">
+        <label>Full Name *</label>
+        <input type="text" id="newEmpName" placeholder="e.g. Rahul Sharma" style="width:100%;height:36px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+      </div>
+      <div class="field">
+        <label>Employee ID *</label>
+        <input type="text" id="newEmpId" placeholder="e.g. CI12345" style="width:100%;height:36px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+      </div>
+      <div class="field">
+        <label>Team</label>
+        <select id="newEmpTeam" class="ctrl" style="width:100%;height:36px">
+          <option value="Core">Core</option>
+          <option value="MW">MW</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Lead *</label>
+        <select id="newEmpLead" class="ctrl" style="width:100%;height:36px">
+          <option>Ajinkya Vichare</option>
+          <option>Charusheela Pawar</option>
+          <option>Khaleel Sowdagar</option>
+          <option selected>Nikhil Patil</option>
+          <option>Sandesh Patil</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>SPOC</label>
+        <input type="text" id="newEmpSpoc" placeholder="SPOC name (optional)" style="width:100%;height:36px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+      </div>
+    </div>
+    <div id="addEmpErr" style="color:#A32D2D;font-size:12px;margin-top:.5rem;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('addEmpModal').classList.remove('open')">Cancel</button>
+      <button class="btn primary" onclick="doAddEmployee()">Add Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMOVE EMPLOYEE CONFIRM MODAL -->
+<div class="modal-bg" id="removeEmpModal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:28px;margin-bottom:.75rem">⚠️</div>
+    <h3 style="margin-bottom:.5rem">Remove Employee?</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">Are you sure you want to remove <strong id="removeEmpNameLabel"></strong> from the roster? This cannot be undone.</p>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn" onclick="document.getElementById('removeEmpModal').classList.remove('open')">Cancel</button>
+      <button class="btn danger" onclick="doRemoveEmployee()">Yes, Remove</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="exportModal">
   <div class="modal">
     <h3 id="exportModalTitle">Export Data</h3>
@@ -355,7 +458,7 @@ tr:hover td{background:var(--bg)}
 const SHEET_ID = "1zAcENT5CV3iElPYMSQYPoI9bXLhHwjxF-3J2L1VslpQ";
 const SHEET_TAB = "Submissions";
 
-const ALL_EMP = [
+const ALL_EMP_DEFAULT = [
   "Abdullah Khan","Abhishek Singh","Aditya Ohol","Ahamed Sowdagar","Alwin Jose","Ayush Dave",
   "Brihaspati Yadav","Dhanesh Bhadwalkar","Dipti Shetye","Fazal Shaikh","Gangaiguru Dharmaraj",
   "Gaurang Thakur","Harsh Sharma","Harshad Patil","Harshal Chavan","Harshal Choudhari",
@@ -367,28 +470,60 @@ const ALL_EMP = [
   "Shubham Babar","Spandan Thombare","Sunil Vishwakarma","Surag Hanjankar","Suraj Sah",
   "Tuljesh Yadav","Tushar Habib","V. N. Sunder","Vasant Ambore","Vishal Bendre","Yash Yewale"
 ];
-const EMP_IDS = {"Abdullah Khan":"CI17969","Abhishek Singh":"CI16525","Aditya Ohol":"CI18916","Ahamed Sowdagar":"CI18672","Alwin Jose":"CI17601","Ayush Dave":"CI16507","Brihaspati Yadav":"CI9377","Dhanesh Bhadwalkar":"CI15175","Dipti Shetye":"CI16523","Fazal Shaikh":"CI15061","Gangaiguru Dharmaraj":"CI20587","Gaurang Thakur":"CI14244","Harsh Sharma":"CI18914","Harshad Patil":"CI15004","Harshal Chavan":"CI15006","Harshal Choudhari":"CI14684","Harshvardhan Patil":"CI15003","Jayesh Saindane":"CI14716","Jignesh Solanki":"CI19877","Kamlesh Shimpi":"CI15001","Kapil Singh":"CI19250","Karan Pillai":"CI13169","Krishna Balyapelli":"CI16506","Mayuri Borkar":"CI18929","Mulayam Yadav":"CI10340","Namira Khan":"CI14563","Omkar Shinde":"CI18739","Prachit Raut":"CI14780","Prajakta Shelar":"CI11620","Prajwal Bhosale":"CI18913","Pranavesh Patil":"CI14949","Prasanna Nandoskar":"CI16407","Prathamesh Lad":"CI12082","Pravin Sargar":"CI13113","Rahul Gupta":"CI13213","Ramkrishna Patil":"CI13479","Ruchita Sonar":"CI18917","Sakshi Shikhare":"CI13525","Sandip Patil":"CI18912","Sanjeev Dangi":"CI17283","Shruti Walve":"CI13668","Shubham Babar":"CI18927","Spandan Thombare":"CI18911","Sunil Vishwakarma":"CI6899","Surag Hanjankar":"CI14893","Suraj Sah":"CI16509","Tuljesh Yadav":"CI8741","Tushar Habib":"CI14793","V. N. Sunder":"CI14741","Vasant Ambore":"CI16550","Vishal Bendre":"CI16143","Yash Yewale":"CI18915"};
-const LEAD_MAP = {"Abdullah Khan":"Charusheela Pawar","Abhishek Singh":"Khaleel Sowdagar","Aditya Ohol":"Nikhil Patil","Ahamed Sowdagar":"Nikhil Patil","Alwin Jose":"Sandesh Patil","Ayush Dave":"Nikhil Patil","Brihaspati Yadav":"Khaleel Sowdagar","Dhanesh Bhadwalkar":"Nikhil Patil","Dipti Shetye":"Nikhil Patil","Fazal Shaikh":"Nikhil Patil","Gangaiguru Dharmaraj":"Nikhil Patil","Gaurang Thakur":"Nikhil Patil","Harsh Sharma":"Nikhil Patil","Harshad Patil":"Nikhil Patil","Harshal Chavan":"Nikhil Patil","Harshal Choudhari":"Khaleel Sowdagar","Harshvardhan Patil":"Khaleel Sowdagar","Jayesh Saindane":"Nikhil Patil","Jignesh Solanki":"Sandesh Patil","Kamlesh Shimpi":"Nikhil Patil","Kapil Singh":"Ajinkya Vichare","Karan Pillai":"Nikhil Patil","Krishna Balyapelli":"Nikhil Patil","Mayuri Borkar":"Nikhil Patil","Mulayam Yadav":"Sandesh Patil","Namira Khan":"Nikhil Patil","Omkar Shinde":"Nikhil Patil","Prachit Raut":"Nikhil Patil","Prajakta Shelar":"Nikhil Patil","Prajwal Bhosale":"Nikhil Patil","Pranavesh Patil":"Khaleel Sowdagar","Prasanna Nandoskar":"Nikhil Patil","Prathamesh Lad":"Nikhil Patil","Pravin Sargar":"Nikhil Patil","Rahul Gupta":"Nikhil Patil","Ramkrishna Patil":"Nikhil Patil","Ruchita Sonar":"Nikhil Patil","Sakshi Shikhare":"Nikhil Patil","Sandip Patil":"Nikhil Patil","Sanjeev Dangi":"Sandesh Patil","Shruti Walve":"Nikhil Patil","Shubham Babar":"Nikhil Patil","Spandan Thombare":"Nikhil Patil","Sunil Vishwakarma":"Charusheela Pawar","Surag Hanjankar":"Nikhil Patil","Suraj Sah":"Nikhil Patil","Tuljesh Yadav":"Nikhil Patil","Tushar Habib":"Nikhil Patil","V. N. Sunder":"Nikhil Patil","Vasant Ambore":"Nikhil Patil","Vishal Bendre":"Nikhil Patil","Yash Yewale":"Nikhil Patil"};
-const SPOC_MAP = {"Abdullah Khan":"Sunil Vishwakarma","Abhishek Singh":"Pranavesh Patil","Aditya Ohol":"Prasanna Nandoskar","Ahamed Sowdagar":"Prathamesh Lad","Alwin Jose":"Jignesh Solanki","Ayush Dave":"Prasanna Nandoskar","Dhanesh Bhadwalkar":"Rahul Gupta","Dipti Shetye":"Vishal Bendre","Fazal Shaikh":"Rahul Gupta","Harsh Sharma":"Prajakta Shelar","Harshad Patil":"Tuljesh Yadav","Harshal Chavan":"Prajakta Shelar","Harshal Choudhari":"Brihaspati Yadav","Harshvardhan Patil":"Brihaspati Yadav","Kamlesh Shimpi":"Prathamesh Lad","Krishna Balyapelli":"Jayesh Saindane","Mayuri Borkar":"Jayesh Saindane","Mulayam Yadav":"Jignesh Solanki","Namira Khan":"Karan Pillai","Omkar Shinde":"Karan Pillai","Prachit Raut":"Rahul Gupta","Prajwal Bhosale":"Prasanna Nandoskar","Prasanna Nandoskar":"Tuljesh Yadav","Pravin Sargar":"Karan Pillai","Ramkrishna Patil":"Prasanna Nandoskar","Ruchita Sonar":"Vishal Bendre","Sakshi Shikhare":"Tuljesh Yadav","Sandip Patil":"Prajakta Shelar","Sanjeev Dangi":"Jignesh Solanki","Shruti Walve":"Vishal Bendre","Shubham Babar":"Jayesh Saindane","Spandan Thombare":"Gaurang Thakur","Surag Hanjankar":"Gaurang Thakur","Suraj Sah":"Rahul Gupta","Tushar Habib":"Tuljesh Yadav","V. N. Sunder":"Prathamesh Lad","Vasant Ambore":"Gaurang Thakur","Yash Yewale":"Prathamesh Lad"};
-const TEAM_MAP = {"Harshvardhan Patil":"MW"};
+const EMP_IDS_DEFAULT = {"Abdullah Khan":"CI17969","Abhishek Singh":"CI16525","Aditya Ohol":"CI18916","Ahamed Sowdagar":"CI18672","Alwin Jose":"CI17601","Ayush Dave":"CI16507","Brihaspati Yadav":"CI9377","Dhanesh Bhadwalkar":"CI15175","Dipti Shetye":"CI16523","Fazal Shaikh":"CI15061","Gangaiguru Dharmaraj":"CI20587","Gaurang Thakur":"CI14244","Harsh Sharma":"CI18914","Harshad Patil":"CI15004","Harshal Chavan":"CI15006","Harshal Choudhari":"CI14684","Harshvardhan Patil":"CI15003","Jayesh Saindane":"CI14716","Jignesh Solanki":"CI19877","Kamlesh Shimpi":"CI15001","Kapil Singh":"CI19250","Karan Pillai":"CI13169","Krishna Balyapelli":"CI16506","Mayuri Borkar":"CI18929","Mulayam Yadav":"CI10340","Namira Khan":"CI14563","Omkar Shinde":"CI18739","Prachit Raut":"CI14780","Prajakta Shelar":"CI11620","Prajwal Bhosale":"CI18913","Pranavesh Patil":"CI14949","Prasanna Nandoskar":"CI16407","Prathamesh Lad":"CI12082","Pravin Sargar":"CI13113","Rahul Gupta":"CI13213","Ramkrishna Patil":"CI13479","Ruchita Sonar":"CI18917","Sakshi Shikhare":"CI13525","Sandip Patil":"CI18912","Sanjeev Dangi":"CI17283","Shruti Walve":"CI13668","Shubham Babar":"CI18927","Spandan Thombare":"CI18911","Sunil Vishwakarma":"CI6899","Surag Hanjankar":"CI14893","Suraj Sah":"CI16509","Tuljesh Yadav":"CI8741","Tushar Habib":"CI14793","V. N. Sunder":"CI14741","Vasant Ambore":"CI16550","Vishal Bendre":"CI16143","Yash Yewale":"CI18915"};
+const LEAD_MAP_DEFAULT = {"Abdullah Khan":"Charusheela Pawar","Abhishek Singh":"Khaleel Sowdagar","Aditya Ohol":"Nikhil Patil","Ahamed Sowdagar":"Nikhil Patil","Alwin Jose":"Sandesh Patil","Ayush Dave":"Nikhil Patil","Brihaspati Yadav":"Khaleel Sowdagar","Dhanesh Bhadwalkar":"Nikhil Patil","Dipti Shetye":"Nikhil Patil","Fazal Shaikh":"Nikhil Patil","Gangaiguru Dharmaraj":"Nikhil Patil","Gaurang Thakur":"Nikhil Patil","Harsh Sharma":"Nikhil Patil","Harshad Patil":"Nikhil Patil","Harshal Chavan":"Nikhil Patil","Harshal Choudhari":"Khaleel Sowdagar","Harshvardhan Patil":"Khaleel Sowdagar","Jayesh Saindane":"Nikhil Patil","Jignesh Solanki":"Sandesh Patil","Kamlesh Shimpi":"Nikhil Patil","Kapil Singh":"Ajinkya Vichare","Karan Pillai":"Nikhil Patil","Krishna Balyapelli":"Nikhil Patil","Mayuri Borkar":"Nikhil Patil","Mulayam Yadav":"Sandesh Patil","Namira Khan":"Nikhil Patil","Omkar Shinde":"Nikhil Patil","Prachit Raut":"Nikhil Patil","Prajakta Shelar":"Nikhil Patil","Prajwal Bhosale":"Nikhil Patil","Pranavesh Patil":"Khaleel Sowdagar","Prasanna Nandoskar":"Nikhil Patil","Prathamesh Lad":"Nikhil Patil","Pravin Sargar":"Nikhil Patil","Rahul Gupta":"Nikhil Patil","Ramkrishna Patil":"Nikhil Patil","Ruchita Sonar":"Nikhil Patil","Sakshi Shikhare":"Nikhil Patil","Sandip Patil":"Nikhil Patil","Sanjeev Dangi":"Sandesh Patil","Shruti Walve":"Nikhil Patil","Shubham Babar":"Nikhil Patil","Spandan Thombare":"Nikhil Patil","Sunil Vishwakarma":"Charusheela Pawar","Surag Hanjankar":"Nikhil Patil","Suraj Sah":"Nikhil Patil","Tuljesh Yadav":"Nikhil Patil","Tushar Habib":"Nikhil Patil","V. N. Sunder":"Nikhil Patil","Vasant Ambore":"Nikhil Patil","Vishal Bendre":"Nikhil Patil","Yash Yewale":"Nikhil Patil"};
+const SPOC_MAP_DEFAULT = {"Abdullah Khan":"Sunil Vishwakarma","Abhishek Singh":"Pranavesh Patil","Aditya Ohol":"Prasanna Nandoskar","Ahamed Sowdagar":"Prathamesh Lad","Alwin Jose":"Jignesh Solanki","Ayush Dave":"Prasanna Nandoskar","Dhanesh Bhadwalkar":"Rahul Gupta","Dipti Shetye":"Vishal Bendre","Fazal Shaikh":"Rahul Gupta","Harsh Sharma":"Prajakta Shelar","Harshad Patil":"Tuljesh Yadav","Harshal Chavan":"Prajakta Shelar","Harshal Choudhari":"Brihaspati Yadav","Harshvardhan Patil":"Brihaspati Yadav","Kamlesh Shimpi":"Prathamesh Lad","Krishna Balyapelli":"Jayesh Saindane","Mayuri Borkar":"Jayesh Saindane","Mulayam Yadav":"Jignesh Solanki","Namira Khan":"Karan Pillai","Omkar Shinde":"Karan Pillai","Prachit Raut":"Rahul Gupta","Prajwal Bhosale":"Prasanna Nandoskar","Prasanna Nandoskar":"Tuljesh Yadav","Pravin Sargar":"Karan Pillai","Ramkrishna Patil":"Prasanna Nandoskar","Ruchita Sonar":"Vishal Bendre","Sakshi Shikhare":"Tuljesh Yadav","Sandip Patil":"Prajakta Shelar","Sanjeev Dangi":"Jignesh Solanki","Shruti Walve":"Vishal Bendre","Shubham Babar":"Jayesh Saindane","Spandan Thombare":"Gaurang Thakur","Surag Hanjankar":"Gaurang Thakur","Suraj Sah":"Rahul Gupta","Tushar Habib":"Tuljesh Yadav","V. N. Sunder":"Prathamesh Lad","Vasant Ambore":"Gaurang Thakur","Yash Yewale":"Prathamesh Lad"};
+const TEAM_MAP_DEFAULT = {"Harshvardhan Patil":"MW"};
 
-function getTeam(n){return TEAM_MAP[n]||"Core"}
-function getLead(n){return LEAD_MAP[n]||"Nikhil Patil"}
-function getSPOC(n){return SPOC_MAP[n]||"—"}
-function getEmpId(n){return EMP_IDS[n]||"—"}
+
+
+
+// ============================================================
+// ADMIN PASSWORD — Change this to your preferred password
+// ============================================================
+const ADMIN_PASSWORD = "clover@admin";
 
 // State
 let allRows = [];  // all submission rows from sheets
-let onLeave = new Set(JSON.parse(localStorage.getItem("onLeave")||"[]"));
+let onLeave = new Set(JSON.parse(localStorage.getItem("onLeave_"+getTodayIST())||"[]"));
 let defRemarks = JSON.parse(localStorage.getItem("defRemarks")||"{}");
 let exportTarget = "all";
-let todayStr = new Date().toISOString().slice(0,10);
+let todayStr = getTodayIST();
+let adminUnlocked = false;
+let empToRemove = null;
+
+// Dynamic employee data — loaded from localStorage or defaults
+let EMP_LIST = JSON.parse(localStorage.getItem("empList")||"null") || [...ALL_EMP_DEFAULT];
+let EMP_IDS_DYN = JSON.parse(localStorage.getItem("empIds")||"null") || {...EMP_IDS_DEFAULT};
+let LEAD_MAP_DYN = JSON.parse(localStorage.getItem("leadMap")||"null") || {...LEAD_MAP_DEFAULT};
+let SPOC_MAP_DYN = JSON.parse(localStorage.getItem("spocMap")||"null") || {...SPOC_MAP_DEFAULT};
+let TEAM_MAP_DYN = JSON.parse(localStorage.getItem("teamMap")||"null") || {...TEAM_MAP_DEFAULT};
+
+// Alias dynamic maps to the getters
+function getTeam(n){return TEAM_MAP_DYN[n]||"Core"}
+function getLead(n){return LEAD_MAP_DYN[n]||"Nikhil Patil"}
+function getSPOC(n){return SPOC_MAP_DYN[n]||"—"}
+function getEmpId(n){return EMP_IDS_DYN[n]||"—"}
+// ALL_EMP now reads from dynamic list
+Object.defineProperty(window,"ALL_EMP",{get:()=>EMP_LIST});
+
+function getTodayIST(){
+  return new Date(new Date().getTime()+5.5*60*60*1000).toISOString().slice(0,10);
+}
+
+function saveEmpData(){
+  localStorage.setItem("empList",JSON.stringify(EMP_LIST));
+  localStorage.setItem("empIds",JSON.stringify(EMP_IDS_DYN));
+  localStorage.setItem("leadMap",JSON.stringify(LEAD_MAP_DYN));
+  localStorage.setItem("spocMap",JSON.stringify(SPOC_MAP_DYN));
+  localStorage.setItem("teamMap",JSON.stringify(TEAM_MAP_DYN));
+}
 
 document.getElementById("todayLabel").textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 document.getElementById("filterDate").value = todayStr;
 
 // NAVIGATION
-const views = ["dashboard","submissions","defaulters","all"];
+const views = ["dashboard","submissions","defaulters","all","admin"];
 function showView(v){
   views.forEach(x=>{
     document.getElementById("view-"+x).style.display = x===v?"block":"none";
@@ -399,6 +534,118 @@ function showView(v){
   if(v==="submissions") renderSubmissions();
   if(v==="defaulters") renderDefaulters();
   if(v==="all") renderAll();
+  if(v==="admin") renderAdminRoster();
+}
+
+// MIDNIGHT AUTO-REFRESH: detect day change and reload
+let _lastDay = getTodayIST();
+setInterval(()=>{
+  const nowDay = getTodayIST();
+  if(nowDay !== _lastDay){
+    _lastDay = nowDay;
+    todayStr = nowDay;
+    // Reset leaves for new day
+    onLeave = new Set();
+    localStorage.setItem("onLeave_"+nowDay,"[]");
+    document.getElementById("todayLabel").textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+    document.getElementById("filterDate").value = nowDay;
+    loadData();
+  }
+}, 30000); // check every 30 seconds
+
+// ADMIN FUNCTIONS
+function checkAdminPw(){
+  const val = document.getElementById("adminPwInput").value;
+  if(val === ADMIN_PASSWORD){
+    adminUnlocked = true;
+    document.getElementById("adminGate").style.display="none";
+    document.getElementById("adminContent").style.display="block";
+    renderAdminRoster();
+  } else {
+    document.getElementById("adminPwErr").style.display="block";
+    document.getElementById("adminPwInput").value="";
+  }
+}
+document.getElementById("adminPwInput").addEventListener("keydown",e=>{if(e.key==="Enter")checkAdminPw();});
+
+function openAddEmp(){
+  if(!adminUnlocked){alert("Please unlock admin panel first.");return;}
+  document.getElementById("addEmpModal").classList.add("open");
+  document.getElementById("newEmpName").value="";
+  document.getElementById("newEmpId").value="";
+  document.getElementById("newEmpSpoc").value="";
+  document.getElementById("addEmpErr").style.display="none";
+}
+document.getElementById("addEmpModal").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open")});
+document.getElementById("removeEmpModal").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open")});
+
+function doAddEmployee(){
+  const name = document.getElementById("newEmpName").value.trim();
+  const id = document.getElementById("newEmpId").value.trim();
+  const team = document.getElementById("newEmpTeam").value;
+  const lead = document.getElementById("newEmpLead").value;
+  const spoc = document.getElementById("newEmpSpoc").value.trim();
+  const errEl = document.getElementById("addEmpErr");
+  if(!name){errEl.textContent="Name is required.";errEl.style.display="block";return;}
+  if(!id){errEl.textContent="Employee ID is required.";errEl.style.display="block";return;}
+  if(EMP_LIST.includes(name)){errEl.textContent="Employee already exists.";errEl.style.display="block";return;}
+  EMP_LIST.push(name);
+  EMP_IDS_DYN[name]=id;
+  LEAD_MAP_DYN[name]=lead;
+  if(spoc) SPOC_MAP_DYN[name]=spoc;
+  if(team!=="Core") TEAM_MAP_DYN[name]=team;
+  saveEmpData();
+  document.getElementById("addEmpModal").classList.remove("open");
+  updateMetrics();
+  renderAdminRoster();
+  renderAll();
+  renderDefaulters();
+}
+
+function confirmRemoveEmp(name){
+  empToRemove = name;
+  document.getElementById("removeEmpNameLabel").textContent = name;
+  document.getElementById("removeEmpModal").classList.add("open");
+}
+
+function doRemoveEmployee(){
+  if(!empToRemove) return;
+  EMP_LIST = EMP_LIST.filter(n=>n!==empToRemove);
+  delete EMP_IDS_DYN[empToRemove];
+  delete LEAD_MAP_DYN[empToRemove];
+  delete SPOC_MAP_DYN[empToRemove];
+  delete TEAM_MAP_DYN[empToRemove];
+  onLeave.delete(empToRemove);
+  saveEmpData();
+  document.getElementById("removeEmpModal").classList.remove("open");
+  empToRemove = null;
+  updateMetrics();
+  renderAdminRoster();
+  renderAll();
+  renderDefaulters();
+}
+
+function renderAdminRoster(){
+  if(!adminUnlocked) return;
+  const search = (document.getElementById("adminSearch").value||"").toLowerCase();
+  const leadF = document.getElementById("adminLeadFilter").value;
+  const rows = EMP_LIST.filter(n=>{
+    if(search && !n.toLowerCase().includes(search)) return false;
+    if(leadF && getLead(n)!==leadF) return false;
+    return true;
+  });
+  document.getElementById("adminRosterLabel").textContent = `Roster (${EMP_LIST.length} employees)`;
+  const tbody = document.getElementById("adminTbody");
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="7" class="no-data">No employees found</td></tr>`;return;}
+  tbody.innerHTML = rows.map((n,i)=>`<tr>
+    <td style="color:var(--text-muted)">${i+1}</td>
+    <td><strong>${n}</strong></td>
+    <td class="mono">${getEmpId(n)}</td>
+    <td><span class="badge" style="background:#f0f0f0;color:#555;font-size:10px">${getTeam(n)}</span></td>
+    <td style="font-size:12px">${getLead(n)}</td>
+    <td style="font-size:12px">${getSPOC(n)}</td>
+    <td><button class="btn danger" style="font-size:11px;height:26px;padding:3px 10px" onclick="confirmRemoveEmp('${n.replace(/'/g,"\\'")}')">Remove</button></td>
+  </tr>`).join("");
 }
 
 // ============================================================
@@ -613,15 +860,19 @@ function getSubmittedNames(){
 
 function updateMetrics(){
   const submitted = getSubmittedNames();
+  const total = EMP_LIST.length;
   const sub = submitted.size;
   const lv = onLeave.size;
-  const def = 52 - sub - lv;
+  const def = total - sub - lv;
   document.getElementById("m-submitted").textContent = sub;
   document.getElementById("m-defaulters").textContent = Math.max(0,def);
   document.getElementById("m-leave").textContent = lv;
-  const pct = Math.round(sub/52*100);
+  const pct = Math.round(sub/total*100);
   document.getElementById("progBar").style.width = pct+"%";
   document.getElementById("progPct").textContent = pct+"%";
+  // Update total resources metric dynamically
+  const totalEl = document.querySelector(".metric.blue .m-val");
+  if(totalEl) totalEl.textContent = total;
 }
 
 function renderLeadSummary(){
@@ -721,13 +972,15 @@ function renderAll(){
   const search = (document.getElementById("allSearch").value||"").toLowerCase();
   const statusF = document.getElementById("allStatusFilter").value;
   const leadF = document.getElementById("allLeadFilter").value;
-  const rows = ALL_EMP.filter(n=>{
+  const rows = EMP_LIST.filter(n=>{
     const st = onLeave.has(n)?"leave":submitted.has(n)?"submitted":"defaulter";
     if(search&&!n.toLowerCase().includes(search)) return false;
     if(statusF&&st!==statusF) return false;
     if(leadF&&getLead(n)!==leadF) return false;
     return true;
   });
+  const countEl = document.getElementById("allEmpCountLabel");
+  if(countEl) countEl.textContent = `Full roster — ${EMP_LIST.length} employees`;
   const tbody = document.getElementById("allTbody");
   tbody.innerHTML = rows.map(n=>{
     const st = onLeave.has(n)?"leave":submitted.has(n)?"submitted":"defaulter";
@@ -748,7 +1001,7 @@ function renderAll(){
 
 function toggleLeave(name,checked){
   if(checked) onLeave.add(name); else onLeave.delete(name);
-  localStorage.setItem("onLeave",JSON.stringify([...onLeave]));
+  localStorage.setItem("onLeave_"+getTodayIST(),JSON.stringify([...onLeave]));
   updateMetrics();
   renderLeadSummary();
   renderAll();
