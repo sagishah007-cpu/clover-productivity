@@ -244,6 +244,7 @@ tr:hover td{background:var(--bg)}
         <div class="topbar-left"><h2>Submitted Forms</h2><p>Live data from Google Sheets</p></div>
         <div class="topbar-right">
           <button class="btn refresh-btn" onclick="loadData()">↻ Refresh</button>
+          <button class="btn" onclick="downloadTodayCSV()">↓ Today's Data</button>
           <button class="btn primary" onclick="openExport('all')">↓ Export to Excel</button>
         </div>
       </div>
@@ -816,6 +817,11 @@ function showDebugPanel(){
   if(allRows.length > 0){
     out += `=== FIRST ROW SAMPLE ===\n`;
     cols.forEach(c => { out += `  "${c}": "${String(firstRow[c]).substring(0,60)}"\n`; });
+    out += `\n=== DATE EXTRACTION TEST ===\n`;
+    const tsTest = firstRow["Timestamp (IST)"] || firstRow["Timestamp"] || firstRow["timestamp"] || "(no timestamp found)";
+    out += `  Raw timestamp value: "${tsTest}"\n`;
+    out += `  Extracted date: "${extractDateFromTS(tsTest)}"\n`;
+    out += `  Month (YYYY-MM): "${extractDateFromTS(tsTest).slice(0,7)}"\n`;
   }
 
   if(todayRows.length === 0 && allRows.length > 0){
@@ -862,9 +868,14 @@ async function loadData(){
       const obj = {};
       cols.forEach((h, i) => {
         const cell = r.c && r.c[i];
-        obj[h] = cell ? (cell.f || cell.v || "") : "";
-        if(obj[h] === null || obj[h] === undefined) obj[h] = "";
-        obj[h] = String(obj[h]);
+        if(!cell){ obj[h]=""; return; }
+        // For timestamp column prefer cell.v (raw Date string), then cell.f (formatted)
+        const isTs = h.toLowerCase().includes("timestamp") || h.toLowerCase().includes("time");
+        let val = "";
+        if(isTs && cell.v !== null && cell.v !== undefined) val = String(cell.v);
+        else if(cell.f !== null && cell.f !== undefined) val = String(cell.f);
+        else if(cell.v !== null && cell.v !== undefined) val = String(cell.v);
+        obj[h] = val === "null" ? "" : val;
       });
       return obj;
     });
@@ -900,6 +911,11 @@ async function loadData(){
   renderSubmissions();
   renderDefaulters();
   renderAll();
+  await loadLeavesFromSheet();
+  updateMetrics();
+  renderLeadSummary();
+  renderAll();
+  renderDefaulters();
   document.querySelector(".main").classList.remove("refreshing");
   btn.textContent = "↻ Refresh";
 }
@@ -909,24 +925,37 @@ function extractDateFromTS(ts){
   ts = String(ts).trim();
 
   // ISO UTC format: "2026-05-04T06:23:40.000Z" or "2026-05-04T06:23:40"
-  // Must convert UTC to IST (+5:30) before extracting date
   if(ts.match(/^\d{4}-\d{2}-\d{2}T/)){
     const d = new Date(ts);
     if(!isNaN(d)){
       const ist = new Date(d.getTime() + 5.5*60*60*1000);
-      return ist.toISOString().slice(0,10); // YYYY-MM-DD in IST
+      return ist.toISOString().slice(0,10);
     }
   }
 
-  // Format: M/D/YYYY or MM/DD/YYYY (Google Sheets US locale)
+  // gviz Date() string: "Date(2026,4,4,6,23,40)" — month is 0-indexed!
+  const gvizDate = ts.match(/Date\((\d+),(\d+),(\d+)/);
+  if(gvizDate){
+    const yr=parseInt(gvizDate[1]), mo=parseInt(gvizDate[2]), dy=parseInt(gvizDate[3]);
+    return `${yr}-${String(mo+1).padStart(2,"0")}-${String(dy).padStart(2,"0")}`;
+  }
+
+  // Format: "5/4/2026, 11:43:55 AM" or "5/4/2026 11:43:55" (M/D/YYYY)
   const slashUS = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if(slashUS) return `${slashUS[3]}-${String(slashUS[1]).padStart(2,"0")}-${String(slashUS[2]).padStart(2,"0")}`;
 
-  // Format: DD-MM-YYYY HH:MM:SS IST  or  YYYY-MM-DD HH:MM:SS IST
-  const dashParts = ts.split(" ")[0].split("-");
+  // Format: "04-05-2026 11:43:55 IST" or "2026-05-04 11:43:55"
+  const dashParts = ts.split(/[\s,]/)[0].split("-");
   if(dashParts.length===3){
     if(dashParts[0].length===4) return dashParts.slice(0,3).join("-"); // YYYY-MM-DD
     return `${dashParts[2]}-${dashParts[1]}-${dashParts[0]}`; // DD-MM-YYYY
+  }
+
+  // Last resort: try native Date parse
+  const d2 = new Date(ts);
+  if(!isNaN(d2)){
+    const ist2 = new Date(d2.getTime() + 5.5*60*60*1000);
+    return ist2.toISOString().slice(0,10);
   }
 
   return "";
@@ -1152,7 +1181,93 @@ function doExport(){
 }
 
 // ============================================================
-// MONTHLY REPORT & PERFORMERS
+// DAILY DOWNLOAD
+// ============================================================
+function downloadTodayCSV(){
+  const today = getTodayIST();
+  const rows = getTodayRows();
+  if(!rows.length){ alert("No submissions for today yet."); return; }
+  const wb = XLSX.utils.book_new();
+  const wsData = [["Timestamp","Employee ID","Employee Name","SPOC","Lead","Task Type","Task Category","Customer Name","Ticket ID","No. of Tickets","Description","Active Time (HH:MM)","Remarks"]];
+  rows.forEach(r=>{
+    wsData.push([
+      r["Timestamp (IST)"]||r["Timestamp"]||"",
+      r["Employee ID"]||"", r["Employee Name"]||"",
+      r["SPOC Name"]||"", r["Lead Name"]||"",
+      r["Task Type"]||"", r["Task Category"]||"",
+      r["Customer Name"]||"", r["Ticket ID"]||"",
+      r["No. of Tickets"]||"", r["Description"]||"",
+      r["Active Time (HH:MM)"]||r["Active Time"]||"",
+      r["Remarks"]||""
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, "Today");
+  XLSX.writeFile(wb, `daily_productivity_${today}.xlsx`);
+}
+
+// ============================================================
+// LEAVE SYNC — stores leaves in a separate Google Sheet tab
+// so all devices see the same data
+// ============================================================
+const LEAVE_SHEET_TAB = "Leaves"; // create a tab named "Leaves" in your sheet
+
+async function syncLeavesToSheet(){
+  // Save to Apps Script as well (best effort)
+  try {
+    const today = getTodayIST();
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        action: "saveLeaves",
+        date: today,
+        leaves: [...onLeave]
+      })
+    });
+  } catch(e){ /* silent fail — localStorage is fallback */ }
+  // Always save to localStorage as backup
+  localStorage.setItem("onLeave_"+getTodayIST(), JSON.stringify([...onLeave]));
+}
+
+async function loadLeavesFromSheet(){
+  try {
+    const today = getTodayIST();
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(LEAVE_SHEET_TAB)}&t=${Date.now()}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    if(!json.table || !json.table.rows) return;
+    const cols = json.table.cols.map(c=>c.label);
+    const dateIdx = cols.findIndex(c=>c.toLowerCase().includes("date"));
+    const leaveIdx = cols.findIndex(c=>c.toLowerCase().includes("leave")||c.toLowerCase().includes("name"));
+    if(dateIdx===-1||leaveIdx===-1) return;
+    const todayLeaves = new Set();
+    json.table.rows.forEach(r=>{
+      const rowDate = r.c[dateIdx]?.f||r.c[dateIdx]?.v||"";
+      const name = r.c[leaveIdx]?.f||r.c[leaveIdx]?.v||"";
+      if(String(rowDate).startsWith(today)&&name) todayLeaves.add(String(name));
+    });
+    if(todayLeaves.size>0){
+      onLeave = todayLeaves;
+      localStorage.setItem("onLeave_"+today, JSON.stringify([...onLeave]));
+    }
+  } catch(e){
+    // Fallback: load from localStorage
+    const saved = localStorage.getItem("onLeave_"+getTodayIST());
+    if(saved) onLeave = new Set(JSON.parse(saved));
+  }
+}
+
+// Override toggleLeave to also sync
+function toggleLeave(name,checked){
+  if(checked) onLeave.add(name); else onLeave.delete(name);
+  syncLeavesToSheet();
+  updateMetrics();
+  renderLeadSummary();
+  renderAll();
+  renderDefaulters();
+}
 // ============================================================
 function populateMonthPickers(){
   const pickers = ["monthPicker","perfMonthPicker"];
@@ -1196,18 +1311,20 @@ function getMonthRows(ym){
 
 function buildMonthStats(ym){
   const rows = getMonthRows(ym);
-  const stats = {}; // name -> {days:Set, tickets:0, nontickets:0, mins:0}
+  const stats = {};
   rows.forEach(r=>{
-    const name = r["Employee Name"]||r["Employee Name*"]||"";
+    // Handle all possible column name variations
+    const name = r["Employee Name"]||r["Employee Name*"]||r["EmployeeName"]||r["employee name"]||r["Name"]||"";
     if(!name) return;
     if(!stats[name]) stats[name]={days:new Set(),tickets:0,nontickets:0,mins:0};
     const ts = r["Timestamp (IST)"]||r["Timestamp"]||r["timestamp"]||"";
     const d = extractDateFromTS(ts);
     if(d) stats[name].days.add(d);
-    const type = (r["Task Type"]||"").toLowerCase();
+    const type = (r["Task Type"]||r["Task type"]||r["task type"]||"").toLowerCase().trim();
     if(type==="ticketed") stats[name].tickets++;
-    else if(type==="non-ticketed"||type==="non ticketed") stats[name].nontickets++;
-    const t = r["Active Time (HH:MM)"]||r["Active Time"]||"";
+    else if(type.includes("non")) stats[name].nontickets++;
+    // Try every possible active time column name
+    const t = r["Active Time (HH:MM)"]||r["Active Time"]||r["active time"]||r["Active time (HH:MM)"]||r["ActiveTime"]||"";
     stats[name].mins += parseHHMM(t);
   });
   return stats;
